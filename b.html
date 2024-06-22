@@ -1,36 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom AR.js NFT Marker</title>
+<html>
     <script src="aframe.min.js"></script>
-    <script src="aframe-ar-nft.js"></script>
-</head>
-<body style="margin: 0px; overflow: hidden;">
-    <a-scene embedded arjs>
-        <a-nft type="nft" url="z/assets/nft/my" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-            <a-entity
+    <!-- we import arjs version without NFT but with marker + location based support -->
+    <script src="aframe-ar.js"></script>
+    <body style="margin : 0px; overflow: hidden;">
+        <a-scene embedded arjs>
+            <a-marker type="pattern" url="z/hiro1.patt">
+                <a-entity
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="1 1 1"
-                gltf-model="url(assets/nft/model.gltf)">
-            </a-entity>
-        </a-nft>
-        <a-entity camera></a-entity>
-    </a-scene>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const nftMarker = document.querySelector('a-nft');
-
-            nftMarker.addEventListener('markerFound', (event) => {
-                console.log('NFT Marker found: ', event.target);
-            });
-
-            nftMarker.addEventListener('markerLost', (event) => {
-                console.log('NFT Marker lost: ', event.target);
-            });
-        });
-    </script>
-</body>
+                gltf-model="url(model.gltf)"
+                ></a-entity>
+            </a-marker>
+            <a-entity camera></a-entity>
+        </a-scene>
+    </body>
 </html>
