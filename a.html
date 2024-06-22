@@ -26,52 +26,58 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="1 1 1"
-                gltf-model="url(model.gltf)"
-                class="clickable">
+                gltf-model="url(model.gltf)">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
     </a-scene>
     
     <audio id="audioPlayer" src="雨打芭蕉.mp3"></audio>
+    <button id="playButton">Play</button>
 
     <script>
-        AFRAME.registerComponent('click-listener', {
-            init: function () {
-                this.el.addEventListener('click', function (evt) {
-                    const audioPlayer = document.getElementById('audioPlayer');
-                    if (audioPlayer.paused) {
-                        audioPlayer.play();
-                    } else {
-                        audioPlayer.pause();
-                    }
-                });
-            }
-        });
-
         document.addEventListener('DOMContentLoaded', () => {
             const marker = document.querySelector('a-marker');
             const model = document.getElementById('model');
+            const playButton = document.getElementById('playButton');
             const audioPlayer = document.getElementById('audioPlayer');
 
             let isPlaying = false;
 
-            model.setAttribute('click-listener', '');
-
-            marker.addEventListener('markerFound', () => {
-                console.log('Marker found');
+            marker.addEventListener('markerFound', (event) => {
+                console.log('Marker found: ', event.target);
                 if (isPlaying) {
                     audioPlayer.play();
                 }
             });
 
-            marker.addEventListener('markerLost', () => {
-                console.log('Marker lost');
+            marker.addEventListener('markerLost', (event) => {
+                console.log('Marker lost: ', event.target);
                 if (!audioPlayer.paused) {
                     isPlaying = true;
                     audioPlayer.pause();
                 } else {
                     isPlaying = false;
+                }
+            });
+
+            playButton.addEventListener('click', () => {
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                    playButton.textContent = 'Pause';
+                } else {
+                    audioPlayer.pause();
+                    playButton.textContent = 'Play';
+                }
+            });
+
+            model.addEventListener('click', () => {
+                if (audioPlayer.paused) {
+                    audioPlayer.play();
+                    playButton.textContent = 'Pause';
+                } else {
+                    audioPlayer.pause();
+                    playButton.textContent = 'Play';
                 }
             });
         });
