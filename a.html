@@ -6,23 +6,11 @@
     <title>Custom AR.js Pattern Marker</title>
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
-    <style>
-        #playButton {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body style="margin: 0px; overflow: hidden;">
     <a-scene embedded arjs>
         <a-marker preset="custom" url="my.patt">
-            <a-entity
+            <a-entity id="model"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="1 1 1"
@@ -32,30 +20,38 @@
         <a-entity camera></a-entity>
     </a-scene>
     
-    <audio id="audioPlayer" src="雨打芭蕉.mp3"></audio>
-    <button id="playButton">Play</button>
+    <audio id="audioPlayer" src="your-audio-file.mp3"></audio>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const marker = document.querySelector('a-marker');
-            const playButton = document.getElementById('playButton');
+            const model = document.getElementById('model');
             const audioPlayer = document.getElementById('audioPlayer');
 
-            marker.addEventListener('markerFound', (event) => {
-                console.log('Marker found: ', event.target);
-            });
+            let isPlaying = false;
 
-            marker.addEventListener('markerLost', (event) => {
-                console.log('Marker lost: ', event.target);
-            });
-
-            playButton.addEventListener('click', () => {
+            model.addEventListener('click', () => {
                 if (audioPlayer.paused) {
                     audioPlayer.play();
-                    playButton.textContent = 'Pause';
                 } else {
                     audioPlayer.pause();
-                    playButton.textContent = 'Play';
+                }
+            });
+
+            marker.addEventListener('markerFound', () => {
+                console.log('Marker found');
+                if (isPlaying) {
+                    audioPlayer.play();
+                }
+            });
+
+            marker.addEventListener('markerLost', () => {
+                console.log('Marker lost');
+                if (!audioPlayer.paused) {
+                    isPlaying = true;
+                    audioPlayer.pause();
+                } else {
+                    isPlaying = false;
                 }
             });
         });
