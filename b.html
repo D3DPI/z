@@ -1,19 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom AR.js Pattern Marker</title>
     <script src="aframe.min.js"></script>
-    <!-- we import arjs version without NFT but with marker + location based support -->
     <script src="aframe-ar.js"></script>
-    <body style="margin : 0px; overflow: hidden;">
-        <a-scene embedded arjs>
-            <a-marker type="pattern" url="z/hiro1.patt">
-                <a-entity
+</head>
+<body style="margin: 0px; overflow: hidden;">
+    <a-scene embedded arjs>
+        <a-marker type="pattern" url="z/my.patt">
+            <a-entity
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="1 1 1"
-                gltf-model="url(model.gltf)"
-                ></a-entity>
-            </a-marker>
-            <a-entity camera></a-entity>
-        </a-scene>
-    </body>
+                gltf-model="url(model.gltf)">
+            </a-entity>
+        </a-marker>
+        <a-entity camera></a-entity>
+    </a-scene>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const marker = document.querySelector('a-marker');
+
+            marker.addEventListener('markerFound', (event) => {
+                console.log('Marker found: ', event.target);
+            });
+
+            marker.addEventListener('markerLost', (event) => {
+                console.log('Marker lost: ', event.target);
+            });
+        });
+    </script>
+</body>
 </html>
