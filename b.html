@@ -1,28 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom AR.js NFT Marker</title>
     <script src="aframe.min.js"></script>
-    <!-- we import arjs version without NFT but with marker + location based support -->
     <script src="aframe-ar-nft.js"></script>
-    <body style="margin : 0px; overflow: hidden;">
-        <a-scene embedded arjs>
-            <a-nft type="nft" url="assets/nft/my" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-                <a-entity
+</head>
+<body style="margin: 0px; overflow: hidden;">
+    <a-scene embedded arjs>
+        <a-nft type="nft" url="assets/nft/my" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+            <a-entity
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="1 1 1"
-                gltf-model="url(model.gltf)"
-                ></a-entity>
-            </a-nft>
-            <a-entity camera></a-entity>
-        </a-scene>
-<!--         <script>
-            document.querySelector('a-marker').addEventListener('markerFound', (event) => {
-                console.log('Marker found: ', event.target);
+                gltf-model="url(assets/nft/model.gltf)">
+            </a-entity>
+        </a-nft>
+        <a-entity camera></a-entity>
+    </a-scene>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const nftMarker = document.querySelector('a-nft');
+
+            nftMarker.addEventListener('markerFound', (event) => {
+                console.log('NFT Marker found: ', event.target);
             });
 
-            document.querySelector('a-marker').addEventListener('markerLost', (event) => {
-                console.log('Marker lost: ', event.target);
+            nftMarker.addEventListener('markerLost', (event) => {
+                console.log('NFT Marker lost: ', event.target);
             });
-        </script> -->
-    </body>
+        });
+    </script>
+</body>
 </html>
