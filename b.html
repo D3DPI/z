@@ -15,5 +15,14 @@
             </a-marker>
             <a-entity camera></a-entity>
         </a-scene>
+        <script>
+            document.querySelector('a-marker').addEventListener('markerFound', (event) => {
+                console.log('Marker found: ', event.target);
+            });
+
+            document.querySelector('a-marker').addEventListener('markerLost', (event) => {
+                console.log('Marker lost: ', event.target);
+            });
+        </script>
     </body>
 </html>
