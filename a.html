@@ -6,6 +6,18 @@
     <title>Custom AR.js Pattern Marker</title>
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
+    <style>
+        #playButton {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body style="margin: 0px; overflow: hidden;">
     <a-scene embedded arjs>
@@ -14,7 +26,8 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="1 1 1"
-                gltf-model="url(model.gltf)">
+                gltf-model="url(model.gltf)"
+                class="clickable">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
@@ -23,6 +36,19 @@
     <audio id="audioPlayer" src="雨打芭蕉.mp3"></audio>
 
     <script>
+        AFRAME.registerComponent('click-listener', {
+            init: function () {
+                this.el.addEventListener('click', function (evt) {
+                    const audioPlayer = document.getElementById('audioPlayer');
+                    if (audioPlayer.paused) {
+                        audioPlayer.play();
+                    } else {
+                        audioPlayer.pause();
+                    }
+                });
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             const marker = document.querySelector('a-marker');
             const model = document.getElementById('model');
@@ -30,13 +56,7 @@
 
             let isPlaying = false;
 
-            model.addEventListener('click', () => {
-                if (audioPlayer.paused) {
-                    audioPlayer.play();
-                } else {
-                    audioPlayer.pause();
-                }
-            });
+            model.setAttribute('click-listener', '');
 
             marker.addEventListener('markerFound', () => {
                 console.log('Marker found');
