@@ -125,6 +125,7 @@
                 } else {
                     isPlaying = false;
                 }
+                currentAudioPlayer = null; // Reset currentAudioPlayer on marker lost
             });
 
             marker2.addEventListener('markerFound', () => {
@@ -148,6 +149,7 @@
                 } else {
                     isPlaying = false;
                 }
+                currentAudioPlayer = null; // Reset currentAudioPlayer on marker lost
             });
 
             playButton.addEventListener('click', () => {
