@@ -71,9 +71,18 @@
             let currentAudioPlayer = null;
 
             const loadTextFile = (url, callback) => {
+                console.log('Loading text file:', url); // Debug info
                 fetch(url)
-                    .then(response => response.text())
-                    .then(data => callback(data))
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.text();
+                    })
+                    .then(data => {
+                        console.log('Text file loaded:', url, data); // Debug info
+                        callback(data);
+                    })
                     .catch(error => console.error('Error loading text file:', error));
             };
 
