@@ -30,20 +30,24 @@
 </head>
 <body style="margin: 0px; overflow: hidden;">
     <a-scene embedded arjs>
-        <a-marker id="marker1" preset="custom" url="1/pattern1.patt">
+        <!-- Marker 1 -->
+        <a-marker id="marker1" preset="custom" url="1/pattern1.patt" markerFound="model1Visible(true); model2Visible(false);" markerLost="model1Visible(false);">
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.1 0.1 0.1"
-                gltf-model="url(1/model1.gltf)">
+                gltf-model="url(1/model1.gltf)"
+                visible="false">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="2/pattern2.patt">
+        <!-- Marker 2 -->
+        <a-marker id="marker2" preset="custom" url="2/pattern2.patt" markerFound="model2Visible(true); model1Visible(false);" markerLost="model2Visible(false);">
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.1 0.1 0.1"
-                gltf-model="url(2/model2.gltf)">
+                gltf-model="url(2/model2.gltf)"
+                visible="false">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
@@ -56,148 +60,110 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM fully loaded and parsed');
-
-            const marker1 = document.getElementById('marker1');
-            const model1 = document.getElementById('model1');
-            const audioPlayer1 = document.getElementById('audioPlayer1');
-
-            const marker2 = document.getElementById('marker2');
-            const model2 = document.getElementById('model2');
-            const audioPlayer2 = document.getElementById('audioPlayer2');
-
             const playButton = document.getElementById('playButton');
             const infoText = document.getElementById('infoText');
-
+            const audioPlayer1 = document.getElementById('audioPlayer1');
+            const audioPlayer2 = document.getElementById('audioPlayer2');
+            let currentAudio = null;
             let isPlaying = false;
-            let currentAudioPlayer = null;
-            let currentMarker = null;
-            let info1Text = '';
-            let info2Text = '';
 
-            const preloadResources = () => {
-                return Promise.all([
-                    fetch('1/info1.txt').then(response => response.text()).then(data => { info1Text = data; }),
-                    fetch('2/info2.txt').then(response => response.text()).then(data => { info2Text = data; }),
-                    new Promise(resolve => {
-                        const audio1 = new Audio('1/audio1.mp3');
-                        audio1.addEventListener('canplaythrough', resolve, { once: true });
-                    }),
-                    new Promise(resolve => {
-                        const audio2 = new Audio('2/audio2.mp3');
-                        audio2.addEventListener('canplaythrough', resolve, { once: true });
-                    }),
-                    new Promise(resolve => {
-                        const loader = new THREE.GLTFLoader();
-                        loader.load('1/model1.gltf', resolve);
-                    }),
-                    new Promise(resolve => {
-                        const loader = new THREE.GLTFLoader();
-                        loader.load('2/model2.gltf', resolve);
-                    })
-                ]);
+            const model1 = document.getElementById('model1');
+            const model2 = document.getElementById('model2');
+
+            const model1Visible = (visible) => {
+                model1.setAttribute('visible', visible);
+            };
+            const model2Visible = (visible) => {
+                model2.setAttribute('visible', visible);
             };
 
-            preloadResources().then(() => {
-                console.log('All resources preloaded');
-            }).catch(err => {
-                console.error('Error preloading resources', err);
-            });
-
-            const enablePlayButton = () => {
-                playButton.disabled = false;
-                playButton.style.backgroundColor = '#007BFF';
-                playButton.style.cursor = 'pointer';
-                playButton.textContent = 'Play';
-            };
-
-            const disablePlayButton = () => {
-                playButton.disabled = true;
-                playButton.style.backgroundColor = 'grey';
-                playButton.style.cursor = 'not-allowed';
-                playButton.textContent = 'Play';
-            };
-
-            const playAudio = (audioPlayer) => {
-                if (currentAudioPlayer && currentAudioPlayer !== audioPlayer) {
-                    currentAudioPlayer.pause();
+            const playAudio = (audio) => {
+                if (currentAudio && currentAudio !== audio) {
+                    currentAudio.pause();
                 }
-                audioPlayer.play();
-                playButton.textContent = 'Pause';
-                currentAudioPlayer = audioPlayer;
+                audio.play();
+                isPlaying = true;
+                updatePlayButton();
+                currentAudio = audio;
             };
 
-            const pauseAudio = (audioPlayer) => {
-                audioPlayer.pause();
-                playButton.textContent = 'Play';
-            };
-
-            const markerFound = (marker, audioPlayer, infoTextContent) => {
-                if (currentMarker && currentMarker !== marker) {
-                    currentMarker.emit('markerLost');
+            const pauseAudio = (audio) => {
+                if (currentAudio === audio) {
+                    audio.pause();
+                    isPlaying = false;
+                    updatePlayButton();
                 }
-                console.log(`Marker ${marker.id} found`);
-                currentMarker = marker;
-                currentAudioPlayer = audioPlayer;
-                infoText.textContent = infoTextContent;
-                enablePlayButton();
+            };
+
+            const updatePlayButton = () => {
                 if (isPlaying) {
-                    playAudio(audioPlayer);
+                    playButton.textContent = 'Pause';
+                } else {
+                    playButton.textContent = 'Play';
                 }
             };
-
-            const markerLost = (marker, audioPlayer) => {
-                console.log(`Marker ${marker.id} lost`);
-                if (currentMarker === marker) {
-                    infoText.textContent = 'Scan a marker to display information';
-                    disablePlayButton();
-                    if (!audioPlayer.paused) {
-                        isPlaying = true;
-                        pauseAudio(audioPlayer);
-                    } else {
-                        isPlaying = false;
-                    }
-                    currentMarker = null;
-                    currentAudioPlayer = null;
-                }
-            };
-
-            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
-            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
-
-            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
-            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
 
             playButton.addEventListener('click', () => {
-                console.log('Play button clicked');
-                if (currentAudioPlayer) {
-                    if (currentAudioPlayer.paused) {
-                        playAudio(currentAudioPlayer);
-                    } else {
-                        pauseAudio(currentAudioPlayer);
-                    }
+                if (!isPlaying) {
+                    playAudio(currentAudio);
                 } else {
-                    console.log('No audio player selected');
+                    pauseAudio(currentAudio);
                 }
             });
 
-            model1.addEventListener('click', () => {
-                console.log('Model 1 clicked');
-                if (audioPlayer1.paused) {
-                    playAudio(audioPlayer1);
-                } else {
-                    pauseAudio(audioPlayer1);
+            audioPlayer1.addEventListener('ended', () => {
+                if (currentAudio === audioPlayer1) {
+                    isPlaying = false;
+                    updatePlayButton();
                 }
             });
 
-            model2.addEventListener('click', () => {
-                console.log('Model 2 clicked');
-                if (audioPlayer2.paused) {
-                    playAudio(audioPlayer2);
-                } else {
-                    pauseAudio(audioPlayer2);
+            audioPlayer2.addEventListener('ended', () => {
+                if (currentAudio === audioPlayer2) {
+                    isPlaying = false;
+                    updatePlayButton();
                 }
             });
+
+            // Handle marker found and lost events
+            function handleMarkerFound(markerId) {
+                const marker = document.getElementById(markerId);
+                const audioPlayer = markerId === 'marker1' ? audioPlayer1 : audioPlayer2;
+                const infoTextContent = markerId === 'marker1' ? 'Info for Marker 1' : 'Info for Marker 2';
+                infoText.textContent = infoTextContent;
+
+                if (marker.getAttribute('markerFound') !== 'true') {
+                    marker.emit('markerFound');
+                }
+                playButton.disabled = false;
+                if (!isPlaying) {
+                    playAudio(audioPlayer);
+                }
+            }
+
+            function handleMarkerLost(markerId) {
+                const audioPlayer = markerId === 'marker1' ? audioPlayer1 : audioPlayer2;
+                infoText.textContent = 'Scan a marker to display information';
+                playButton.disabled = true;
+                if (currentAudio === audioPlayer) {
+                    pauseAudio(audioPlayer);
+                }
+                if (markerId === 'marker1') {
+                    model1Visible(false);
+                } else {
+                    model2Visible(false);
+                }
+            }
+
+            window.addEventListener('model1Found', () => handleMarkerFound('marker1'));
+            window.addEventListener('model2Found', () => handleMarkerFound('marker2'));
+            window.addEventListener('model1Lost', () => handleMarkerLost('marker1'));
+            window.addEventListener('model2Lost', () => handleMarkerLost('marker2'));
+
+            // Initial setup
+            model1Visible(false);
+            model2Visible(false);
+            playButton.textContent = 'Play';
         });
     </script>
 </body>
