@@ -6,29 +6,157 @@
     <title>Custom AR.js Pattern Marker</title>
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
+    <style>
+        #playButton {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #infoText {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #FFF;
+            color: #000;
+            border: none;
+        }
+    </style>
 </head>
 <body style="margin: 0px; overflow: hidden;">
     <a-scene embedded arjs>
-        <a-marker preset="custom" url="my.patt">
-            <a-entity
+        <a-marker id="marker1" preset="custom" url="1/pattern1.patt">
+            <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
-                scale="1 1 1"
-                gltf-model="url(model.gltf)">
+                scale="0.1 0.1 0.1"
+                gltf-model="url(1/model1.gltf)">
+            </a-entity>
+        </a-marker>
+        <a-marker id="marker2" preset="custom" url="2/pattern2.patt">
+            <a-entity id="model2"
+                position="0 0 0"
+                rotation="0 0 0"
+                scale="0.1 0.1 0.1"
+                gltf-model="url(2/model2.gltf)">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
     </a-scene>
+    
+    <audio id="audioPlayer1" src="1/audio1.mp3"></audio>
+    <audio id="audioPlayer2" src="2/audio2.mp3"></audio>
+    <button id="playButton">Play</button>
+    <div id="infoText">Scan a marker to display information</div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const marker = document.querySelector('a-marker');
+            const marker1 = document.getElementById('marker1');
+            const model1 = document.getElementById('model1');
+            const audioPlayer1 = document.getElementById('audioPlayer1');
+            
+            const marker2 = document.getElementById('marker2');
+            const model2 = document.getElementById('model2');
+            const audioPlayer2 = document.getElementById('audioPlayer2');
 
-            marker.addEventListener('markerFound', (event) => {
-                console.log('Marker found: ', event.target);
+            const playButton = document.getElementById('playButton');
+            const infoText = document.getElementById('infoText');
+            
+            let isPlaying = false;
+            let currentAudioPlayer = null;
+
+            const loadTextFile = (url, callback) => {
+                fetch(url)
+                    .then(response => response.text())
+                    .then(data => callback(data))
+                    .catch(error => console.error('Error loading text file:', error));
+            };
+
+            const playAudio = (audioPlayer) => {
+                if (currentAudioPlayer && currentAudioPlayer !== audioPlayer) {
+                    currentAudioPlayer.pause();
+                }
+                audioPlayer.play();
+                playButton.textContent = 'Pause';
+                currentAudioPlayer = audioPlayer;
+            };
+
+            const pauseAudio = (audioPlayer) => {
+                audioPlayer.pause();
+                playButton.textContent = 'Play';
+            };
+
+            marker1.addEventListener('markerFound', () => {
+                console.log('Marker 1 found');
+                loadTextFile('1/info1.txt', (data) => {
+                    infoText.textContent = data;
+                });
+                if (isPlaying) {
+                    playAudio(audioPlayer1);
+                }
             });
 
-            marker.addEventListener('markerLost', (event) => {
-                console.log('Marker lost: ', event.target);
+            marker1.addEventListener('markerLost', () => {
+                console.log('Marker 1 lost');
+                infoText.textContent = 'Marker 1 lost.';
+                if (!audioPlayer1.paused) {
+                    isPlaying = true;
+                    pauseAudio(audioPlayer1);
+                } else {
+                    isPlaying = false;
+                }
+            });
+
+            marker2.addEventListener('markerFound', () => {
+                console.log('Marker 2 found');
+                loadTextFile('2/info2.txt', (data) => {
+                    infoText.textContent = data;
+                });
+                if (isPlaying) {
+                    playAudio(audioPlayer2);
+                }
+            });
+
+            marker2.addEventListener('markerLost', () => {
+                console.log('Marker 2 lost');
+                infoText.textContent = 'Marker 2 lost.';
+                if (!audioPlayer2.paused) {
+                    isPlaying = true;
+                    pauseAudio(audioPlayer2);
+                } else {
+                    isPlaying = false;
+                }
+            });
+
+            playButton.addEventListener('click', () => {
+                if (currentAudioPlayer) {
+                    if (currentAudioPlayer.paused) {
+                        playAudio(currentAudioPlayer);
+                    } else {
+                        pauseAudio(currentAudioPlayer);
+                    }
+                }
+            });
+
+            model1.addEventListener('click', () => {
+                if (audioPlayer1.paused) {
+                    playAudio(audioPlayer1);
+                } else {
+                    pauseAudio(audioPlayer1);
+                }
+            });
+
+            model2.addEventListener('click', () => {
+                if (audioPlayer2.paused) {
+                    playAudio(audioPlayer2);
+                } else {
+                    pauseAudio(audioPlayer2);
+                }
             });
         });
     </script>
