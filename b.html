@@ -12,10 +12,10 @@
             top: 20px;
             left: 20px;
             padding: 10px 20px;
-            background-color: #007BFF;
+            background-color: grey;
             color: white;
             border: none;
-            cursor: pointer;
+            cursor: not-allowed;
         }
         #infoText {
             position: absolute;
@@ -51,29 +51,28 @@
     
     <audio id="audioPlayer1" src="1/audio1.mp3"></audio>
     <audio id="audioPlayer2" src="2/audio2.mp3"></audio>
-    <button id="playButton">Play</button>
+    <button id="playButton" disabled>Play</button>
     <div id="infoText">Scan a marker to display information</div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM fully loaded and parsed');
-            
+
             const marker1 = document.getElementById('marker1');
             const model1 = document.getElementById('model1');
             const audioPlayer1 = document.getElementById('audioPlayer1');
-            
+
             const marker2 = document.getElementById('marker2');
             const model2 = document.getElementById('model2');
             const audioPlayer2 = document.getElementById('audioPlayer2');
 
             const playButton = document.getElementById('playButton');
             const infoText = document.getElementById('infoText');
-            
+
             let isPlaying = false;
             let currentAudioPlayer = null;
 
             const loadTextFile = (url, callback) => {
-                console.log('Loading text file:', url); // Debug info
                 fetch(url)
                     .then(response => {
                         if (!response.ok) {
@@ -82,10 +81,23 @@
                         return response.text();
                     })
                     .then(data => {
-                        console.log('Text file loaded:', url, data); // Debug info
                         callback(data);
                     })
                     .catch(error => console.error('Error loading text file:', error));
+            };
+
+            const enablePlayButton = () => {
+                playButton.disabled = false;
+                playButton.style.backgroundColor = '#007BFF';
+                playButton.style.cursor = 'pointer';
+                playButton.textContent = 'Play';
+            };
+
+            const disablePlayButton = () => {
+                playButton.disabled = true;
+                playButton.style.backgroundColor = 'grey';
+                playButton.style.cursor = 'not-allowed';
+                playButton.textContent = 'Play';
             };
 
             const playAudio = (audioPlayer) => {
@@ -95,23 +107,20 @@
                 audioPlayer.play();
                 playButton.textContent = 'Pause';
                 currentAudioPlayer = audioPlayer;
-                console.log('Playing audio:', audioPlayer.src); // Debug info
             };
 
             const pauseAudio = (audioPlayer) => {
                 audioPlayer.pause();
                 playButton.textContent = 'Play';
-                console.log('Paused audio:', audioPlayer.src); // Debug info
             };
 
             marker1.addEventListener('markerFound', () => {
                 console.log('Marker 1 found');
                 currentAudioPlayer = audioPlayer1;
-                console.log('Set currentAudioPlayer to audioPlayer1');
                 loadTextFile('1/info1.txt', (data) => {
                     infoText.textContent = data;
-                    console.log('Updated info text for marker 1'); // Debug info
                 });
+                enablePlayButton();
                 if (isPlaying) {
                     playAudio(audioPlayer1);
                 }
@@ -119,25 +128,24 @@
 
             marker1.addEventListener('markerLost', () => {
                 console.log('Marker 1 lost');
-                infoText.textContent = 'Marker 1 lost.';
+                infoText.textContent = 'Scan a marker to display information';
                 if (!audioPlayer1.paused) {
                     isPlaying = true;
                     pauseAudio(audioPlayer1);
                 } else {
                     isPlaying = false;
                 }
-                currentAudioPlayer = null; // Reset currentAudioPlayer on marker lost
-                console.log('Reset currentAudioPlayer');
+                currentAudioPlayer = null;
+                disablePlayButton();
             });
 
             marker2.addEventListener('markerFound', () => {
                 console.log('Marker 2 found');
                 currentAudioPlayer = audioPlayer2;
-                console.log('Set currentAudioPlayer to audioPlayer2');
                 loadTextFile('2/info2.txt', (data) => {
                     infoText.textContent = data;
-                    console.log('Updated info text for marker 2'); // Debug info
                 });
+                enablePlayButton();
                 if (isPlaying) {
                     playAudio(audioPlayer2);
                 }
@@ -145,15 +153,15 @@
 
             marker2.addEventListener('markerLost', () => {
                 console.log('Marker 2 lost');
-                infoText.textContent = 'Marker 2 lost.';
+                infoText.textContent = 'Scan a marker to display information';
                 if (!audioPlayer2.paused) {
                     isPlaying = true;
                     pauseAudio(audioPlayer2);
                 } else {
                     isPlaying = false;
                 }
-                currentAudioPlayer = null; // Reset currentAudioPlayer on marker lost
-                console.log('Reset currentAudioPlayer');
+                currentAudioPlayer = null;
+                disablePlayButton();
             });
 
             playButton.addEventListener('click', () => {
@@ -165,7 +173,7 @@
                         pauseAudio(currentAudioPlayer);
                     }
                 } else {
-                    console.log('No audio player selected'); // Debug info
+                    console.log('No audio player selected');
                 }
             });
 
