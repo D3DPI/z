@@ -56,6 +56,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM fully loaded and parsed');
+            
             const marker1 = document.getElementById('marker1');
             const model1 = document.getElementById('model1');
             const audioPlayer1 = document.getElementById('audioPlayer1');
@@ -93,17 +95,20 @@
                 audioPlayer.play();
                 playButton.textContent = 'Pause';
                 currentAudioPlayer = audioPlayer;
+                console.log('Playing audio:', audioPlayer.src); // Debug info
             };
 
             const pauseAudio = (audioPlayer) => {
                 audioPlayer.pause();
                 playButton.textContent = 'Play';
+                console.log('Paused audio:', audioPlayer.src); // Debug info
             };
 
             marker1.addEventListener('markerFound', () => {
                 console.log('Marker 1 found');
                 loadTextFile('1/info1.txt', (data) => {
                     infoText.textContent = data;
+                    console.log('Updated info text for marker 1'); // Debug info
                 });
                 if (isPlaying) {
                     playAudio(audioPlayer1);
@@ -125,6 +130,7 @@
                 console.log('Marker 2 found');
                 loadTextFile('2/info2.txt', (data) => {
                     infoText.textContent = data;
+                    console.log('Updated info text for marker 2'); // Debug info
                 });
                 if (isPlaying) {
                     playAudio(audioPlayer2);
@@ -143,16 +149,20 @@
             });
 
             playButton.addEventListener('click', () => {
+                console.log('Play button clicked');
                 if (currentAudioPlayer) {
                     if (currentAudioPlayer.paused) {
                         playAudio(currentAudioPlayer);
                     } else {
                         pauseAudio(currentAudioPlayer);
                     }
+                } else {
+                    console.log('No audio player selected'); // Debug info
                 }
             });
 
             model1.addEventListener('click', () => {
+                console.log('Model 1 clicked');
                 if (audioPlayer1.paused) {
                     playAudio(audioPlayer1);
                 } else {
@@ -161,6 +171,7 @@
             });
 
             model2.addEventListener('click', () => {
+                console.log('Model 2 clicked');
                 if (audioPlayer2.paused) {
                     playAudio(audioPlayer2);
                 } else {
