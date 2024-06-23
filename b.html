@@ -71,6 +71,7 @@
 
             let isPlaying = false;
             let currentAudioPlayer = null;
+            let currentMarker = null;
             let info1Text = '';
             let info2Text = '';
 
@@ -131,51 +132,41 @@
                 playButton.textContent = 'Play';
             };
 
-            marker1.addEventListener('markerFound', () => {
-                console.log('Marker 1 found');
-                currentAudioPlayer = audioPlayer1;
-                infoText.textContent = info1Text;
+            const markerFound = (marker, audioPlayer, infoTextContent) => {
+                if (currentMarker && currentMarker !== marker) {
+                    currentMarker.emit('markerLost');
+                }
+                console.log(`Marker ${marker.id} found`);
+                currentMarker = marker;
+                currentAudioPlayer = audioPlayer;
+                infoText.textContent = infoTextContent;
                 enablePlayButton();
                 if (isPlaying) {
-                    playAudio(audioPlayer1);
+                    playAudio(audioPlayer);
                 }
-            });
+            };
 
-            marker1.addEventListener('markerLost', () => {
-                console.log('Marker 1 lost');
-                infoText.textContent = 'Scan a marker to display information';
-                disablePlayButton();
-                if (!audioPlayer1.paused) {
-                    isPlaying = true;
-                    pauseAudio(audioPlayer1);
-                } else {
-                    isPlaying = false;
+            const markerLost = (marker, audioPlayer) => {
+                console.log(`Marker ${marker.id} lost`);
+                if (currentMarker === marker) {
+                    infoText.textContent = 'Scan a marker to display information';
+                    disablePlayButton();
+                    if (!audioPlayer.paused) {
+                        isPlaying = true;
+                        pauseAudio(audioPlayer);
+                    } else {
+                        isPlaying = false;
+                    }
+                    currentMarker = null;
+                    currentAudioPlayer = null;
                 }
-                currentAudioPlayer = null;
-            });
+            };
 
-            marker2.addEventListener('markerFound', () => {
-                console.log('Marker 2 found');
-                currentAudioPlayer = audioPlayer2;
-                infoText.textContent = info2Text;
-                enablePlayButton();
-                if (isPlaying) {
-                    playAudio(audioPlayer2);
-                }
-            });
+            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
+            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
 
-            marker2.addEventListener('markerLost', () => {
-                console.log('Marker 2 lost');
-                infoText.textContent = 'Scan a marker to display information';
-                disablePlayButton();
-                if (!audioPlayer2.paused) {
-                    isPlaying = true;
-                    pauseAudio(audioPlayer2);
-                } else {
-                    isPlaying = false;
-                }
-                currentAudioPlayer = null;
-            });
+            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
+            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
 
             playButton.addEventListener('click', () => {
                 console.log('Play button clicked');
