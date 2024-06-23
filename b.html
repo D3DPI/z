@@ -57,7 +57,7 @@
     <div id="infoText">Scan a marker to display information</div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const playButton = document.getElementById('playButton');
             const infoText = document.getElementById('infoText');
             const audioPlayer1 = document.getElementById('audioPlayer1');
@@ -94,11 +94,11 @@
 
                 await new Promise(resolve => {
                     const loader = new THREE.GLTFLoader();
-                    loader.load('1/model1.gltf', resolve);
+                    loader.load('1/model1.gltf', () => resolve());
                 });
                 await new Promise(resolve => {
                     const loader = new THREE.GLTFLoader();
-                    loader.load('2/model2.gltf', resolve);
+                    loader.load('2/model2.gltf', () => resolve());
                 });
 
                 console.log('All resources preloaded');
@@ -195,18 +195,14 @@
                 }
             };
 
-            marker1.addEventListener('markerFound', () => handleMarkerFound('marker1'));
-            marker1.addEventListener('markerLost', () => handleMarkerLost('marker1'));
-
-            marker2.addEventListener('markerFound', () => handleMarkerFound('marker2'));
-            marker2.addEventListener('markerLost', () => handleMarkerLost('marker2'));
+            const markers = document.querySelectorAll('a-marker');
+            markers.forEach(marker => {
+                marker.addEventListener('markerFound', () => handleMarkerFound(marker.id));
+                marker.addEventListener('markerLost', () => handleMarkerLost(marker.id));
+            });
 
             // Preload all resources
-            preloadResources().then(() => {
-                console.log('All resources preloaded');
-            }).catch(err => {
-                console.error('Error preloading resources', err);
-            });
+            await preloadResources();
 
             // Initial setup
             model1Visible(false);
