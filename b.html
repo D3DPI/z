@@ -107,6 +107,7 @@
             marker1.addEventListener('markerFound', () => {
                 console.log('Marker 1 found');
                 currentAudioPlayer = audioPlayer1;
+                console.log('Set currentAudioPlayer to audioPlayer1');
                 loadTextFile('1/info1.txt', (data) => {
                     infoText.textContent = data;
                     console.log('Updated info text for marker 1'); // Debug info
@@ -126,11 +127,13 @@
                     isPlaying = false;
                 }
                 currentAudioPlayer = null; // Reset currentAudioPlayer on marker lost
+                console.log('Reset currentAudioPlayer');
             });
 
             marker2.addEventListener('markerFound', () => {
                 console.log('Marker 2 found');
                 currentAudioPlayer = audioPlayer2;
+                console.log('Set currentAudioPlayer to audioPlayer2');
                 loadTextFile('2/info2.txt', (data) => {
                     infoText.textContent = data;
                     console.log('Updated info text for marker 2'); // Debug info
@@ -150,6 +153,7 @@
                     isPlaying = false;
                 }
                 currentAudioPlayer = null; // Reset currentAudioPlayer on marker lost
+                console.log('Reset currentAudioPlayer');
             });
 
             playButton.addEventListener('click', () => {
