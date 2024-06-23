@@ -71,20 +71,38 @@
 
             let isPlaying = false;
             let currentAudioPlayer = null;
+            let info1Text = '';
+            let info2Text = '';
 
-            const loadTextFile = (url, callback) => {
-                fetch(url)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.text();
+            const preloadResources = () => {
+                return Promise.all([
+                    fetch('1/info1.txt').then(response => response.text()).then(data => { info1Text = data; }),
+                    fetch('2/info2.txt').then(response => response.text()).then(data => { info2Text = data; }),
+                    new Promise(resolve => {
+                        const audio1 = new Audio('1/audio1.mp3');
+                        audio1.addEventListener('canplaythrough', resolve, { once: true });
+                    }),
+                    new Promise(resolve => {
+                        const audio2 = new Audio('2/audio2.mp3');
+                        audio2.addEventListener('canplaythrough', resolve, { once: true });
+                    }),
+                    new Promise(resolve => {
+                        const loader = new THREE.GLTFLoader();
+                        loader.load('1/model1.gltf', resolve);
+                    }),
+                    new Promise(resolve => {
+                        const loader = new THREE.GLTFLoader();
+                        loader.load('2/model2.gltf', resolve);
                     })
-                    .then(data => {
-                        callback(data);
-                    })
-                    .catch(error => console.error('Error loading text file:', error));
+                ]);
             };
+
+            preloadResources().then(() => {
+                console.log('All resources preloaded');
+                enablePlayButton();
+            }).catch(err => {
+                console.error('Error preloading resources', err);
+            });
 
             const enablePlayButton = () => {
                 playButton.disabled = false;
@@ -117,10 +135,7 @@
             marker1.addEventListener('markerFound', () => {
                 console.log('Marker 1 found');
                 currentAudioPlayer = audioPlayer1;
-                loadTextFile('1/info1.txt', (data) => {
-                    infoText.textContent = data;
-                });
-                enablePlayButton();
+                infoText.textContent = info1Text;
                 if (isPlaying) {
                     playAudio(audioPlayer1);
                 }
@@ -136,16 +151,12 @@
                     isPlaying = false;
                 }
                 currentAudioPlayer = null;
-                disablePlayButton();
             });
 
             marker2.addEventListener('markerFound', () => {
                 console.log('Marker 2 found');
                 currentAudioPlayer = audioPlayer2;
-                loadTextFile('2/info2.txt', (data) => {
-                    infoText.textContent = data;
-                });
-                enablePlayButton();
+                infoText.textContent = info2Text;
                 if (isPlaying) {
                     playAudio(audioPlayer2);
                 }
@@ -161,7 +172,6 @@
                     isPlaying = false;
                 }
                 currentAudioPlayer = null;
-                disablePlayButton();
             });
 
             playButton.addEventListener('click', () => {
