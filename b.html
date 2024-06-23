@@ -143,10 +143,12 @@
             };
 
             playButton.addEventListener('click', () => {
-                if (!isPlaying) {
-                    playAudio(currentAudio);
-                } else {
-                    pauseAudio(currentAudio);
+                if (currentAudio) {
+                    if (!isPlaying) {
+                        playAudio(currentAudio);
+                    } else {
+                        pauseAudio(currentAudio);
+                    }
                 }
             });
 
@@ -164,9 +166,7 @@
                 }
             });
 
-            // Handle marker found and lost events
             const handleMarkerFound = (markerId) => {
-                const marker = document.getElementById(markerId);
                 const audioPlayer = markerId === 'marker1' ? audioPlayer1 : audioPlayer2;
                 const infoTextContent = markerId === 'marker1' ? info1Text : info2Text;
 
@@ -201,10 +201,8 @@
                 marker.addEventListener('markerLost', () => handleMarkerLost(marker.id));
             });
 
-            // Preload all resources
             await preloadResources();
 
-            // Initial setup
             model1Visible(false);
             model2Visible(false);
             playButton.textContent = 'Play';
