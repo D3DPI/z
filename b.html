@@ -35,8 +35,7 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.1 0.1 0.1"
-                gltf-model="url(1/model1.gltf)"
-                visible="false">
+                gltf-model="url(1/model1.gltf)">
             </a-entity>
         </a-marker>
         <a-marker id="marker2" preset="custom" url="2/pattern2.patt">
@@ -44,8 +43,7 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.1 0.1 0.1"
-                gltf-model="url(2/model2.gltf)"
-                visible="false">
+                gltf-model="url(2/model2.gltf)">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
@@ -134,7 +132,7 @@
                 playButton.textContent = 'Play';
             };
 
-            const markerFound = (marker, audioPlayer, infoTextContent, model) => {
+            const markerFound = (marker, audioPlayer, infoTextContent) => {
                 if (currentMarker && currentMarker !== marker) {
                     currentMarker.emit('markerLost');
                 }
@@ -143,18 +141,16 @@
                 currentAudioPlayer = audioPlayer;
                 infoText.textContent = infoTextContent;
                 enablePlayButton();
-                model.setAttribute('visible', true);
                 if (isPlaying) {
                     playAudio(audioPlayer);
                 }
             };
 
-            const markerLost = (marker, audioPlayer, model) => {
+            const markerLost = (marker, audioPlayer) => {
                 console.log(`Marker ${marker.id} lost`);
                 if (currentMarker === marker) {
                     infoText.textContent = 'Scan a marker to display information';
                     disablePlayButton();
-                    model.setAttribute('visible', false);
                     if (!audioPlayer.paused) {
                         isPlaying = true;
                         pauseAudio(audioPlayer);
@@ -166,11 +162,11 @@
                 }
             };
 
-            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text, model1));
-            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1, model1));
+            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
+            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
 
-            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text, model2));
-            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2, model2));
+            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
+            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
 
             playButton.addEventListener('click', () => {
                 console.log('Play button clicked');
