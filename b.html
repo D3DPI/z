@@ -30,27 +30,29 @@
 </head>
 <body style="margin: 0px; overflow: hidden;">
     <a-scene embedded arjs>
-        <a-marker id="marker1" preset="custom" url="1/pattern1.patt">
+        <a-marker id="marker1" preset="custom" url="pattern1.patt">
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.1 0.1 0.1"
-                gltf-model="url(1/model1.gltf)">
+                gltf-model="url(model1.gltf)"
+                visible="false">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="2/pattern2.patt">
+        <a-marker id="marker2" preset="custom" url="pattern2.patt">
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.1 0.1 0.1"
-                gltf-model="url(2/model2.gltf)">
+                gltf-model="url(model2.gltf)"
+                visible="false">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
     </a-scene>
     
-    <audio id="audioPlayer1" src="1/audio1.mp3"></audio>
-    <audio id="audioPlayer2" src="2/audio2.mp3"></audio>
+    <audio id="audioPlayer1" src="audio1.mp3"></audio>
+    <audio id="audioPlayer2" src="audio2.mp3"></audio>
     <button id="playButton" disabled>Play</button>
     <div id="infoText">Scan a marker to display information</div>
 
@@ -77,23 +79,23 @@
 
             const preloadResources = () => {
                 return Promise.all([
-                    fetch('1/info1.txt').then(response => response.text()).then(data => { info1Text = data; }),
-                    fetch('2/info2.txt').then(response => response.text()).then(data => { info2Text = data; }),
+                    fetch('info1.txt').then(response => response.text()).then(data => { info1Text = data; }),
+                    fetch('info2.txt').then(response => response.text()).then(data => { info2Text = data; }),
                     new Promise(resolve => {
-                        const audio1 = new Audio('1/audio1.mp3');
+                        const audio1 = new Audio('audio1.mp3');
                         audio1.addEventListener('canplaythrough', resolve, { once: true });
                     }),
                     new Promise(resolve => {
-                        const audio2 = new Audio('2/audio2.mp3');
+                        const audio2 = new Audio('audio2.mp3');
                         audio2.addEventListener('canplaythrough', resolve, { once: true });
                     }),
                     new Promise(resolve => {
                         const loader = new THREE.GLTFLoader();
-                        loader.load('1/model1.gltf', resolve);
+                        loader.load('model1.gltf', resolve);
                     }),
                     new Promise(resolve => {
                         const loader = new THREE.GLTFLoader();
-                        loader.load('2/model2.gltf', resolve);
+                        loader.load('model2.gltf', resolve);
                     })
                 ]);
             };
@@ -132,7 +134,7 @@
                 playButton.textContent = 'Play';
             };
 
-            const markerFound = (marker, audioPlayer, infoTextContent) => {
+            const markerFound = (marker, audioPlayer, infoTextContent, model) => {
                 if (currentMarker && currentMarker !== marker) {
                     currentMarker.emit('markerLost');
                 }
@@ -141,16 +143,18 @@
                 currentAudioPlayer = audioPlayer;
                 infoText.textContent = infoTextContent;
                 enablePlayButton();
+                model.setAttribute('visible', true);
                 if (isPlaying) {
                     playAudio(audioPlayer);
                 }
             };
 
-            const markerLost = (marker, audioPlayer) => {
+            const markerLost = (marker, audioPlayer, model) => {
                 console.log(`Marker ${marker.id} lost`);
                 if (currentMarker === marker) {
                     infoText.textContent = 'Scan a marker to display information';
                     disablePlayButton();
+                    model.setAttribute('visible', false);
                     if (!audioPlayer.paused) {
                         isPlaying = true;
                         pauseAudio(audioPlayer);
@@ -162,11 +166,11 @@
                 }
             };
 
-            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
-            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
+            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text, model1));
+            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1, model1));
 
-            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
-            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
+            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text, model2));
+            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2, model2));
 
             playButton.addEventListener('click', () => {
                 console.log('Play button clicked');
