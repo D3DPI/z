@@ -117,10 +117,12 @@
                     }),
                     new Promise(resolve => {
                         const loader = new THREE.GLTFLoader();
+                        loader.setDRACOLoader(new THREE.DRACOLoader()); // Set DRACOLoader here
                         loader.load('model1.gltf', resolve);
                     }),
                     new Promise(resolve => {
                         const loader = new THREE.GLTFLoader();
+                        loader.setDRACOLoader(new THREE.DRACOLoader()); // Set DRACOLoader here
                         loader.load('model2.gltf', resolve);
                     })
                 ]);
