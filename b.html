@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom AR.js Pattern Marker</title>
-    <script src="aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
         #playButton {
@@ -117,12 +117,10 @@
                     }),
                     new Promise(resolve => {
                         const loader = new THREE.GLTFLoader();
-                        loader.setDRACOLoader(new THREE.DRACOLoader()); // Set DRACOLoader here
                         loader.load('model1.gltf', resolve);
                     }),
                     new Promise(resolve => {
                         const loader = new THREE.GLTFLoader();
-                        loader.setDRACOLoader(new THREE.DRACOLoader()); // Set DRACOLoader here
                         loader.load('model2.gltf', resolve);
                     })
                 ]);
@@ -130,6 +128,7 @@
 
             preloadResources().then(() => {
                 console.log('All resources preloaded');
+                enablePlayButton();
             }).catch(err => {
                 console.error('Error preloading resources', err);
             });
@@ -170,7 +169,6 @@
                 currentMarker = marker;
                 currentAudioPlayer = audioPlayer;
                 infoText.textContent = infoTextContent;
-                enablePlayButton();
                 if (isPlaying) {
                     playAudio(audioPlayer);
                 }
@@ -180,7 +178,6 @@
                 console.log(`Marker ${marker.id} lost`);
                 if (currentMarker === marker) {
                     infoText.textContent = 'Scan a marker to display information';
-                    disablePlayButton();
                     if (!audioPlayer.paused) {
                         isPlaying = true;
                         pauseAudio(audioPlayer);
