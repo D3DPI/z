@@ -6,6 +6,8 @@
     <!-- 使用本地的 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
+    <!-- 引入微信的 JS-SDK -->
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
     <style>
         #playButton {
             position: absolute;
@@ -30,8 +32,38 @@
             word-wrap: break-word;
             z-index: 10;
         }
+        #startScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        #startButton {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
     </style>
     <script>
+        // 检测是否在微信浏览器中
+        function isWeixinBrowser() {
+            return /MicroMessenger/i.test(navigator.userAgent);
+        }
+
+        // 检测是否支持 getUserMedia
+        function hasGetUserMedia() {
+            return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        }
+
+        var inWeixinBrowser = isWeixinBrowser();
         var activeMarkerData = null; // 全局变量，用于存储当前活动的标记数据
         var audioPlayers = {}; // 全局对象，用于存储音频播放器
 
@@ -75,7 +107,62 @@
                     alert('没有检测到标记或音频尚未加载。');
                 }
             });
+
+            // 如果在微信浏览器中，尝试初始化微信 JS-SDK
+            if (inWeixinBrowser) {
+                // 请在此处填写您的微信 JS-SDK 配置参数
+                wx.config({
+                    debug: false,
+                    appId: 'YOUR_APP_ID', // 必填，公众号的唯一标识
+                    timestamp: YOUR_TIMESTAMP, // 必填，生成签名的时间戳
+                    nonceStr: 'YOUR_NONCE_STR', // 必填，生成签名的随机串
+                    signature: 'YOUR_SIGNATURE',// 必填，签名
+                    jsApiList: [] // 根据需要填写
+                });
+
+                wx.ready(function(){
+                    // 微信 JS-SDK 准备就绪，尝试访问摄像头
+                    initializeAR();
+                });
+
+                wx.error(function(res){
+                    console.error('微信 JS-SDK 初始化失败：', res);
+                    alert('微信 JS-SDK 初始化失败，无法使用 AR 功能。');
+                    showWeixinGuide();
+                });
+            } else {
+                // 非微信浏览器，直接初始化 AR
+                initializeAR();
+            }
         });
+
+        function initializeAR() {
+            // 检测是否支持 getUserMedia
+            if (!hasGetUserMedia()) {
+                alert('您的浏览器不支持访问摄像头，无法使用 AR 功能。');
+                return;
+            }
+
+            // 移除启动屏幕
+            var startScreen = document.getElementById('startScreen');
+            if (startScreen) {
+                startScreen.style.display = 'none';
+            }
+
+            // 开始 AR.js 的初始化
+            var scene = document.querySelector('a-scene');
+            // 如果需要，可以在此添加额外的初始化代码
+        }
+
+        function showWeixinGuide() {
+            // 显示引导用户在浏览器中打开的提示
+            document.body.innerHTML = `
+                <div style="text-align:center;padding:20px;">
+                    <p>请点击右上角的菜单，选择“在浏览器中打开”，以体验完整的 AR 功能。</p>
+                    <p><img src="open_in_browser.png" alt="在浏览器中打开" style="width:80%;max-width:300px;"></p>
+                </div>
+            `;
+        }
 
         AFRAME.registerComponent('marker-debug', {
             init: function () {
@@ -179,11 +266,20 @@
     </script>
 </head>
 <body style="margin: 0; overflow: hidden;">
+    <!-- 启动屏幕，用于提示用户点击以开始 -->
+    <div id="startScreen">
+        <div>
+            <p>点击屏幕以开始 AR 体验</p>
+            <button id="startButton">开始</button>
+        </div>
+    </div>
+
     <button id="playButton" disabled>Play</button>
     <div id="infoText">Scan a marker to display information</div>
 
     <!-- 修改后的 a-scene 标签，隐藏 AR.js 调试信息和 VR 模式按钮 -->
-    <a-scene embedded arjs="debugUIEnabled: false" vr-mode-ui="enabled: false">
+    <!-- 添加 sourceType: webcam; videoTexture: true; 以提高兼容性 -->
+    <a-scene embedded arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" vr-mode-ui="enabled: false">
         <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
             <a-entity id="model1"
                 position="0 0 0"
