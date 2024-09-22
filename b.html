@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>岭南乐器增强现实视听工具</title>
+    <title>AR.js Marker Detection with Gesture Interaction</title>
     <!-- 使用本地的 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
+    <!-- 引入 aframe-gesture-component -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-gesture-component@5.0.0/dist/aframe-gesture-component.min.js"></script>
     <style>
         #playButton {
             position: absolute;
@@ -44,7 +46,8 @@
             document.addEventListener('DOMContentLoaded', function () {
                 document.body.innerHTML = `
                     <div style="text-align:center;padding:20px;">
-                        <p>为了获得更好的体验，请点击右上角菜单，选择“在默认浏览器中打开”。</p>
+                        <p>为了获得更好的体验，请点击右上角菜单，选择“在浏览器中打开”。</p>
+                        <p><img src="open_in_browser.png" alt="在浏览器中打开" style="width:80%;max-width:300px;"></p>
                     </div>
                 `;
             });
@@ -77,7 +80,8 @@
                             if (audioPlayer.paused) {
                                 audioPlayer.play().then(() => {
                                     activeMarkerData.isPlaying = true;
-                                    playButton.textContent = '暂停';
+                                    playButton.textContent = 'Pause';
+                                    playButton.style.backgroundColor = '#28a745';
                                 }).catch(err => {
                                     console.error('Audio playback failed:', err);
                                     alert('无法播放音频，请与页面进行交互后重试。');
@@ -85,7 +89,8 @@
                             } else {
                                 audioPlayer.pause();
                                 activeMarkerData.isPlaying = false;
-                                playButton.textContent = '播放';
+                                playButton.textContent = 'Play';
+                                playButton.style.backgroundColor = '#007BFF';
                             }
                         } else {
                             alert('音频尚未加载完毕，请稍后再试。');
@@ -184,7 +189,7 @@
                         playButton.disabled = false;
                         playButton.style.backgroundColor = '#007BFF';
                         playButton.style.cursor = 'pointer';
-                        playButton.textContent = isPlaying ? '暂停' : '播放';
+                        playButton.textContent = isPlaying ? 'Pause' : 'Play';
                     }
 
                     function disablePlayButton() {
@@ -199,8 +204,8 @@
     </script>
 </head>
 <body style="margin: 0; overflow: hidden;">
-    <button id="playButton" disabled>播放</button>
-    <div id="infoText">请用摄像头对准岭南乐器码</div>
+    <button id="playButton" disabled>Play</button>
+    <div id="infoText">Scan a marker to display information</div>
 
     <!-- 修改后的 a-scene 标签，隐藏 AR.js 调试信息和 VR 模式按钮 -->
     <!-- 添加 sourceType: webcam; videoTexture: true; 以提高兼容性 -->
@@ -210,7 +215,8 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.02 0.02 0.02"
-                gltf-model="model1.gltf">
+                gltf-model="model1.gltf"
+                gesture-handler>
             </a-entity>
         </a-marker>
         <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
@@ -218,7 +224,8 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.02 0.02 0.02"
-                gltf-model="model2.gltf">
+                gltf-model="model2.gltf"
+                gesture-handler>
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
