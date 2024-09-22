@@ -6,8 +6,6 @@
     <!-- 使用本地的 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
-    <!-- 引入微信的 JS-SDK -->
-    <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
     <style>
         #playButton {
             position: absolute;
@@ -39,210 +37,166 @@
             return /MicroMessenger/i.test(navigator.userAgent);
         }
 
-        // 检测是否支持 getUserMedia
-        function hasGetUserMedia() {
-            return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-        }
-
         var inWeixinBrowser = isWeixinBrowser();
-        var activeMarkerData = null; // 全局变量，用于存储当前活动的标记数据
-        var audioPlayers = {}; // 全局对象，用于存储音频播放器
 
-        // 在页面加载时预加载音频
-        document.addEventListener('DOMContentLoaded', function () {
-            var audioFiles = ['audio1.mp3', 'audio2.mp3'];
-            audioFiles.forEach(function (audioSrc) {
-                var audioPlayer = new Audio();
-                audioPlayer.src = audioSrc;
-                audioPlayer.preload = 'auto';
-                audioPlayer.load(); // 开始加载音频
-
-                audioPlayers[audioSrc] = {
-                    audioPlayer: audioPlayer
-                };
+        if (inWeixinBrowser) {
+            // 显示引导页面
+            document.addEventListener('DOMContentLoaded', function () {
+                document.body.innerHTML = `
+                    <div style="text-align:center;padding:20px;">
+                        <p>为了获得更好的体验，请点击右上角菜单，选择“在浏览器中打开”。</p>
+                        <p><img src="open_in_browser.png" alt="在浏览器中打开" style="width:80%;max-width:300px;"></p>
+                    </div>
+                `;
             });
+        } else {
+            // 非微信浏览器，正常加载页面内容
 
-            // 添加播放按钮的事件监听器
-            var playButton = document.getElementById('playButton');
-            playButton.addEventListener('click', () => {
-                if (activeMarkerData && activeMarkerData.audioPlayer) {
-                    var audioPlayer = activeMarkerData.audioPlayer;
-                    if (audioPlayer.readyState >= 2) { // HAVE_CURRENT_DATA
-                        if (audioPlayer.paused) {
-                            audioPlayer.play().then(() => {
-                                activeMarkerData.isPlaying = true;
-                                playButton.textContent = 'Pause';
-                            }).catch(err => {
-                                console.error('Audio playback failed:', err);
-                                alert('无法播放音频，请与页面进行交互后重试。');
-                            });
-                        } else {
-                            audioPlayer.pause();
-                            activeMarkerData.isPlaying = false;
-                            playButton.textContent = 'Play';
-                        }
-                    } else {
-                        alert('音频尚未加载完毕，请稍后再试。');
-                    }
-                } else {
-                    alert('没有检测到标记或音频尚未加载。');
-                }
-            });
+            var activeMarkerData = null; // 全局变量，用于存储当前活动的标记数据
+            var audioPlayers = {}; // 全局对象，用于存储音频播放器
 
-            // 初始化 AR
-            initializeAR();
-        });
-
-        function initializeAR() {
-            // 如果在微信浏览器中，尝试初始化微信 JS-SDK
-            if (inWeixinBrowser) {
-                // 请在此处填写您的微信 JS-SDK 配置参数
-                wx.config({
-                    debug: false,
-                    appId: 'YOUR_APP_ID', // 必填，公众号的唯一标识
-                    timestamp: YOUR_TIMESTAMP, // 必填，生成签名的时间戳
-                    nonceStr: 'YOUR_NONCE_STR', // 必填，生成签名的随机串
-                    signature: 'YOUR_SIGNATURE',// 必填，签名
-                    jsApiList: [] // 根据需要填写
-                });
-
-                wx.ready(function(){
-                    // 微信 JS-SDK 准备就绪，尝试访问摄像头
-                    startAR();
-                });
-
-                wx.error(function(res){
-                    console.error('微信 JS-SDK 初始化失败：', res);
-                    alert('微信 JS-SDK 初始化失败，无法使用 AR 功能。');
-                    showWeixinGuide();
-                });
-            } else {
-                // 非微信浏览器，直接开始 AR
-                startAR();
-            }
-        }
-
-        function startAR() {
-            // 检测是否支持 getUserMedia
-            if (!hasGetUserMedia()) {
-                alert('您的浏览器不支持访问摄像头，无法使用 AR 功能。');
-                return;
-            }
-
-            // 开始 AR.js 的初始化
-            var scene = document.querySelector('a-scene');
-            // 如果需要，可以在此添加额外的初始化代码
-        }
-
-        function showWeixinGuide() {
-            // 显示引导用户在浏览器中打开的提示
-            document.body.innerHTML = `
-                <div style="text-align:center;padding:20px;">
-                    <p>请点击右上角的菜单，选择“在浏览器中打开”，以体验完整的 AR 功能。</p>
-                    <p><img src="open_in_browser.png" alt="在浏览器中打开" style="width:80%;max-width:300px;"></p>
-                </div>
-            `;
-        }
-
-        AFRAME.registerComponent('marker-debug', {
-            init: function () {
-                var markerEl = this.el;
-                var markerId = markerEl.getAttribute('id');
-                var audioPlayer = null;
-                var infoTextContent = '';
-                var isPlaying = false;
-                var playButton = document.getElementById('playButton');
-                var infoTextEl = document.getElementById('infoText');
-                var isMarkerVisible = false;
-                var audioLoaded = false;
-                var infoLoaded = false;
-
-                // 根据 markerId 设置音频和文本文件路径
-                var audioSrc = '';
-                var infoSrc = '';
-                if (markerId === 'marker1') {
-                    audioSrc = 'audio1.mp3';
-                    infoSrc = 'info1.txt';
-                } else if (markerId === 'marker2') {
-                    audioSrc = 'audio2.mp3';
-                    infoSrc = 'info2.txt';
-                }
-
-                // 获取已预加载的音频播放器
-                var audioData = audioPlayers[audioSrc];
-                if (audioData && audioData.audioPlayer) {
-                    audioPlayer = audioData.audioPlayer;
-                } else {
-                    console.error('Audio player not found for ' + audioSrc);
-                    audioPlayer = new Audio();
+            // 在页面加载时预加载音频
+            document.addEventListener('DOMContentLoaded', function () {
+                var audioFiles = ['audio1.mp3', 'audio2.mp3'];
+                audioFiles.forEach(function (audioSrc) {
+                    var audioPlayer = new Audio();
                     audioPlayer.src = audioSrc;
                     audioPlayer.preload = 'auto';
-                    audioPlayer.load();
-                }
+                    audioPlayer.load(); // 开始加载音频
 
-                // 加载文本
-                fetch(infoSrc)
-                    .then(response => response.ok ? response.text() : '')
-                    .then(data => {
-                        infoTextContent = data;
-                        infoLoaded = true;
-                    })
-                    .catch(err => {
-                        console.error('Error loading info text:', err);
-                        infoLoaded = false;
-                    });
+                    audioPlayers[audioSrc] = {
+                        audioPlayer: audioPlayer
+                    };
+                });
 
-                // 每一帧检查 marker 的可见性
-                this.tick = AFRAME.utils.throttleTick(function () {
-                    var visible = markerEl.object3D.visible;
-                    if (visible !== isMarkerVisible) {
-                        isMarkerVisible = visible;
-                        // 更新音频加载状态
-                        audioLoaded = audioPlayer.readyState >= 2; // HAVE_CURRENT_DATA
-
-                        if (isMarkerVisible) {
-                            // 标记被检测到
-                            if (activeMarkerData && activeMarkerData.markerId !== markerId) {
-                                // 如果有其他活动的标记，暂停其音频
-                                if (activeMarkerData.audioPlayer && !activeMarkerData.audioPlayer.paused) {
-                                    activeMarkerData.audioPlayer.pause();
-                                    activeMarkerData.isPlaying = false;
-                                }
+                // 添加播放按钮的事件监听器
+                var playButton = document.getElementById('playButton');
+                playButton.addEventListener('click', () => {
+                    if (activeMarkerData && activeMarkerData.audioPlayer) {
+                        var audioPlayer = activeMarkerData.audioPlayer;
+                        if (audioPlayer.readyState >= 2) { // HAVE_CURRENT_DATA
+                            if (audioPlayer.paused) {
+                                audioPlayer.play().then(() => {
+                                    activeMarkerData.isPlaying = true;
+                                    playButton.textContent = 'Pause';
+                                }).catch(err => {
+                                    console.error('Audio playback failed:', err);
+                                    alert('无法播放音频，请与页面进行交互后重试。');
+                                });
+                            } else {
+                                audioPlayer.pause();
+                                activeMarkerData.isPlaying = false;
+                                playButton.textContent = 'Play';
                             }
-                            // 更新全局的 activeMarkerData
-                            activeMarkerData = {
-                                markerId: markerId,
-                                audioPlayer: audioPlayer,
-                                infoTextContent: infoTextContent,
-                                isPlaying: isPlaying,
-                                audioLoaded: audioLoaded,
-                                infoLoaded: infoLoaded
-                            };
-                            // 更新信息文本
-                            infoTextEl.textContent = infoTextContent || 'No information available';
-                            enablePlayButton();
                         } else {
-                            // 标记丢失，保持当前文本和音频状态不变
-                            // 不做任何处理，确保文本和音频播放稳定
+                            alert('音频尚未加载完毕，请稍后再试。');
                         }
+                    } else {
+                        alert('没有检测到标记或音频尚未加载。');
                     }
-                }, 100); // 每100ms检查一次
+                });
+            });
 
-                function enablePlayButton() {
-                    playButton.disabled = false;
-                    playButton.style.backgroundColor = '#007BFF';
-                    playButton.style.cursor = 'pointer';
-                    playButton.textContent = isPlaying ? 'Pause' : 'Play';
-                }
+            AFRAME.registerComponent('marker-debug', {
+                init: function () {
+                    var markerEl = this.el;
+                    var markerId = markerEl.getAttribute('id');
+                    var audioPlayer = null;
+                    var infoTextContent = '';
+                    var isPlaying = false;
+                    var playButton = document.getElementById('playButton');
+                    var infoTextEl = document.getElementById('infoText');
+                    var isMarkerVisible = false;
+                    var audioLoaded = false;
+                    var infoLoaded = false;
 
-                function disablePlayButton() {
-                    playButton.disabled = true;
-                    playButton.style.backgroundColor = 'grey';
-                    playButton.style.cursor = 'not-allowed';
-                    playButton.textContent = 'Play';
+                    // 根据 markerId 设置音频和文本文件路径
+                    var audioSrc = '';
+                    var infoSrc = '';
+                    if (markerId === 'marker1') {
+                        audioSrc = 'audio1.mp3';
+                        infoSrc = 'info1.txt';
+                    } else if (markerId === 'marker2') {
+                        audioSrc = 'audio2.mp3';
+                        infoSrc = 'info2.txt';
+                    }
+
+                    // 获取已预加载的音频播放器
+                    var audioData = audioPlayers[audioSrc];
+                    if (audioData && audioData.audioPlayer) {
+                        audioPlayer = audioData.audioPlayer;
+                    } else {
+                        console.error('Audio player not found for ' + audioSrc);
+                        audioPlayer = new Audio();
+                        audioPlayer.src = audioSrc;
+                        audioPlayer.preload = 'auto';
+                        audioPlayer.load();
+                    }
+
+                    // 加载文本
+                    fetch(infoSrc)
+                        .then(response => response.ok ? response.text() : '')
+                        .then(data => {
+                            infoTextContent = data;
+                            infoLoaded = true;
+                        })
+                        .catch(err => {
+                            console.error('Error loading info text:', err);
+                            infoLoaded = false;
+                        });
+
+                    // 每一帧检查 marker 的可见性
+                    this.tick = AFRAME.utils.throttleTick(function () {
+                        var visible = markerEl.object3D.visible;
+                        if (visible !== isMarkerVisible) {
+                            isMarkerVisible = visible;
+                            // 更新音频加载状态
+                            audioLoaded = audioPlayer.readyState >= 2; // HAVE_CURRENT_DATA
+
+                            if (isMarkerVisible) {
+                                // 标记被检测到
+                                if (activeMarkerData && activeMarkerData.markerId !== markerId) {
+                                    // 如果有其他活动的标记，暂停其音频
+                                    if (activeMarkerData.audioPlayer && !activeMarkerData.audioPlayer.paused) {
+                                        activeMarkerData.audioPlayer.pause();
+                                        activeMarkerData.isPlaying = false;
+                                    }
+                                }
+                                // 更新全局的 activeMarkerData
+                                activeMarkerData = {
+                                    markerId: markerId,
+                                    audioPlayer: audioPlayer,
+                                    infoTextContent: infoTextContent,
+                                    isPlaying: isPlaying,
+                                    audioLoaded: audioLoaded,
+                                    infoLoaded: infoLoaded
+                                };
+                                // 更新信息文本
+                                infoTextEl.textContent = infoTextContent || 'No information available';
+                                enablePlayButton();
+                            } else {
+                                // 标记丢失，保持当前文本和音频状态不变
+                                // 不做任何处理，确保文本和音频播放稳定
+                            }
+                        }
+                    }, 100); // 每100ms检查一次
+
+                    function enablePlayButton() {
+                        playButton.disabled = false;
+                        playButton.style.backgroundColor = '#007BFF';
+                        playButton.style.cursor = 'pointer';
+                        playButton.textContent = isPlaying ? 'Pause' : 'Play';
+                    }
+
+                    function disablePlayButton() {
+                        playButton.disabled = true;
+                        playButton.style.backgroundColor = 'grey';
+                        playButton.style.cursor = 'not-allowed';
+                        playButton.textContent = 'Play';
+                    }
                 }
-            }
-        });
+            });
+        }
     </script>
 </head>
 <body style="margin: 0; overflow: hidden;">
