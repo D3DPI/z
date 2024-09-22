@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AR.js Marker Detection with Audio Playback</title>
+    <title>AR.js Marker Detection with Debugging</title>
     <!-- 引入 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
@@ -50,23 +50,14 @@
     <script>
         AFRAME.registerComponent('marker-handler', {
             init: function () {
-                var markerEl = this.el;
-                var markerId = markerEl.getAttribute('id');
-                var playButton = document.getElementById('playButton');
-                var infoTextEl = document.getElementById('infoText');
-                var debugInfoEl = document.getElementById('debugInfo');
+                const marker = this.el;
+                const markerId = marker.getAttribute('id');
+                const playButton = document.getElementById('playButton');
+                const infoTextEl = document.getElementById('infoText');
+                const debugInfoEl = document.getElementById('debugInfo');
 
-                // 全局状态变量
-                var currentMarkerId = null;
-                var isPlaying = false;
-                var audioLoaded = false;
-                var infoLoaded = false;
-                var infoTextContent = '';
-                var audioSrc = '';
-                var infoSrc = '';
-                var audioPlayer = null;
-
-                // 根据 markerId 设置音频和文本文件路径
+                let audioSrc = '';
+                let infoSrc = '';
                 if (markerId === 'marker1') {
                     audioSrc = 'audio1.mp3';
                     infoSrc = 'info1.txt';
@@ -75,43 +66,37 @@
                     infoSrc = 'info2.txt';
                 }
 
-                // 创建音频对象
-                audioPlayer = new Audio();
-                audioPlayer.src = audioSrc;
+                let audioPlayer = new Audio(audioSrc);
                 audioPlayer.preload = 'auto';
+                let audioLoaded = false;
+                let isPlaying = false;
+                let infoTextContent = '';
+                let infoLoaded = false;
+                let isMarkerVisible = false;
 
-                // 音频加载事件
-                audioPlayer.addEventListener('canplaythrough', function() {
+                audioPlayer.addEventListener('canplaythrough', () => {
                     audioLoaded = true;
                     updateDebugInfo();
                 });
 
-                audioPlayer.addEventListener('error', function(e) {
+                audioPlayer.addEventListener('error', (e) => {
                     console.error('Error loading audio:', e);
                     audioLoaded = false;
                     updateDebugInfo();
                 });
 
-                // 音频播放和暂停事件
-                audioPlayer.addEventListener('play', function() {
+                audioPlayer.addEventListener('play', () => {
                     isPlaying = true;
                     playButton.textContent = 'Pause';
                     updateDebugInfo();
                 });
 
-                audioPlayer.addEventListener('pause', function() {
+                audioPlayer.addEventListener('pause', () => {
                     isPlaying = false;
                     playButton.textContent = 'Play';
                     updateDebugInfo();
                 });
 
-                audioPlayer.addEventListener('ended', function() {
-                    isPlaying = false;
-                    playButton.textContent = 'Play';
-                    updateDebugInfo();
-                });
-
-                // 加载文本
                 fetch(infoSrc)
                     .then(response => response.ok ? response.text() : '')
                     .then(data => {
@@ -125,62 +110,41 @@
                         updateDebugInfo();
                     });
 
-                // 播放按钮事件
-                playButton.addEventListener('click', function() {
-                    if (audioLoaded) {
+                playButton.addEventListener('click', () => {
+                    if (audioLoaded && isMarkerVisible) {
                         if (!isPlaying) {
-                            audioPlayer.play().catch(function(err) {
+                            audioPlayer.play().catch(err => {
                                 console.error('Audio playback failed:', err);
-                                alert('Cannot play audio without user interaction.');
+                                alert('无法播放音频，请与页面进行交互后重试。');
                             });
                         } else {
                             audioPlayer.pause();
                         }
                     } else {
-                        alert('Audio not loaded yet.');
+                        alert('标记不可见或音频尚未加载。');
                     }
                 });
 
-                // 标记检测事件
-                markerEl.addEventListener('markerFound', function() {
-                    console.log('Marker Found:', markerId);
-                    handleMarkerFound();
+                marker.addEventListener('markerFound', () => {
+                    isMarkerVisible = true;
+                    infoTextEl.textContent = infoTextContent || 'No information available';
+                    enablePlayButton();
+                    updateDebugInfo();
                 });
 
-                markerEl.addEventListener('markerLost', function() {
-                    console.log('Marker Lost:', markerId);
-                    handleMarkerLost();
+                marker.addEventListener('markerLost', () => {
+                    isMarkerVisible = false;
+                    disablePlayButton();
+                    if (audioPlayer && !audioPlayer.paused) {
+                        audioPlayer.pause();
+                    }
+                    updateDebugInfo();
                 });
-
-                function handleMarkerFound() {
-                    if (currentMarkerId !== markerId) {
-                        // 检测到新的标记
-                        currentMarkerId = markerId;
-                        infoTextEl.textContent = infoTextContent || 'No information available';
-                        enablePlayButton();
-                        updateDebugInfo();
-                    }
-                }
-
-                function handleMarkerLost() {
-                    if (currentMarkerId === markerId) {
-                        // 当前标记丢失
-                        currentMarkerId = null;
-                        // 不重置音频和文本，直到检测到新的标记
-                        // 可以在此添加逻辑，例如暂停音频等
-                        // 如果需要在标记丢失时暂停音频，可取消以下注释
-                        // if (isPlaying) {
-                        //     audioPlayer.pause();
-                        // }
-                        updateDebugInfo();
-                    }
-                }
 
                 function enablePlayButton() {
                     playButton.disabled = false;
                     playButton.style.backgroundColor = '#007BFF';
                     playButton.style.cursor = 'pointer';
-                    playButton.textContent = isPlaying ? 'Pause' : 'Play';
                 }
 
                 function disablePlayButton() {
@@ -191,18 +155,17 @@
                 }
 
                 function updateDebugInfo() {
-                    var debugText = `
-                        Current Marker ID: ${currentMarkerId}
+                    const debugText = `
                         Marker ID: ${markerId}
+                        Marker Visible: ${isMarkerVisible}
                         Audio Loaded: ${audioLoaded}
                         Audio Playing: ${isPlaying}
                         Info Loaded: ${infoLoaded}
-                        Info Text Content: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
+                        Info Text: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
                     `;
                     debugInfoEl.textContent = debugText;
                 }
 
-                // 初始化时禁用播放按钮
                 disablePlayButton();
             }
         });
