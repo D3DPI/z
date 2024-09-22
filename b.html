@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Custom AR.js Pattern Marker</title>
+    <!-- 只加载aframe和aframe-ar，不加载three.min.js和GLTFLoader.js -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
@@ -25,90 +26,114 @@
             color: #000;
             border: none;
         }
+        #statusText {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #FFF;
+            color: #000;
+            border: none;
+        }
     </style>
-    <!-- 定义组件，放在<a-scene>之前 -->
+    <!-- 将 markerhandler 组件的定义放在此处 -->
     <script>
-        AFRAME.registerComponent('marker-handler', {
-            init: function () {
-                var el = this.el; // The a-marker element
-                var markerId = el.getAttribute('id');
-                var audioSrc = '';
-                var infoTextContent = '';
-                var audioPlayer = null;
+        // 定义 markerhandler 组件
+        AFRAME.registerComponent('markerhandler', {
+            init: function() {
+                const sceneEl = this.el.sceneEl;
+                const marker1 = sceneEl.querySelector('#marker1');
+                const marker2 = sceneEl.querySelector('#marker2');
 
-                // 获取页面上的元素
-                var playButton = document.getElementById('playButton');
-                var infoText = document.getElementById('infoText');
+                const audioPlayer1 = document.getElementById('audioPlayer1');
+                const audioPlayer2 = document.getElementById('audioPlayer2');
 
-                // 根据标记ID加载对应的音频和文本
-                if (markerId === 'marker1') {
-                    audioSrc = 'audio1.mp3';
-                    fetch('info1.txt')
-                        .then(response => response.ok ? response.text() : '')
-                        .then(data => { infoTextContent = data; })
-                        .catch(err => { console.error('Error loading info1.txt', err); });
-                } else if (markerId === 'marker2') {
-                    audioSrc = 'audio2.mp3';
-                    fetch('info2.txt')
-                        .then(response => response.ok ? response.text() : '')
-                        .then(data => { infoTextContent = data; })
-                        .catch(err => { console.error('Error loading info2.txt', err); });
-                }
+                const playButton = document.getElementById('playButton');
+                const infoText = document.getElementById('infoText');
+                const statusText = document.getElementById('statusText');
 
-                // 创建音频元素
-                audioPlayer = new Audio(audioSrc);
-                audioPlayer.preload = 'auto';
-                audioPlayer.addEventListener('canplaythrough', () => {
-                    console.log(audioSrc + ' loaded');
-                }, false);
-                audioPlayer.addEventListener('error', (e) => {
-                    console.error('Error loading ' + audioSrc, e);
-                }, false);
+                let currentAudioPlayer = null;
+                let currentMarker = null;
+                let info1Text = '';
+                let info2Text = '';
+                let audio1Loaded = false;
+                let audio2Loaded = false;
 
-                // 标记是否可见的状态
-                var isVisible = false;
+                // 加载文本信息
+                fetch('info1.txt')
+                    .then(response => response.ok ? response.text() : '')
+                    .then(data => { info1Text = data; })
+                    .catch(err => { console.error('Error loading info1.txt', err); });
 
-                el.addEventListener('markerFound', () => {
-                    isVisible = true;
-                    console.log('Marker Visible', markerId);
-                    // 更新信息文本
-                    infoText.textContent = infoTextContent || 'No information available';
-                    // 启用播放按钮
+                fetch('info2.txt')
+                    .then(response => response.ok ? response.text() : '')
+                    .then(data => { info2Text = data; })
+                    .catch(err => { console.error('Error loading info2.txt', err); });
+
+                // 检查音频是否加载完成
+                audioPlayer1.oncanplaythrough = () => { audio1Loaded = true; };
+                audioPlayer1.onerror = (e) => { console.error('Error loading audio1.mp3', e); };
+
+                audioPlayer2.oncanplaythrough = () => { audio2Loaded = true; };
+                audioPlayer2.onerror = (e) => { console.error('Error loading audio2.mp3', e); };
+
+                // Marker 1 事件
+                marker1.addEventListener('visible', () => {
+                    currentMarker = marker1;
+                    currentAudioPlayer = audioPlayer1;
+                    infoText.textContent = info1Text || 'No information available';
+                    statusText.textContent = `Marker 1 visible. Audio loaded: ${audio1Loaded}`;
                     enablePlayButton();
                 });
-
-                el.addEventListener('markerLost', () => {
-                    isVisible = false;
-                    console.log('Marker Lost', markerId);
-                    // 重置信息文本
-                    infoText.textContent = 'Scan a marker to display information';
-                    // 停止音频播放
-                    if (!audioPlayer.paused) {
-                        audioPlayer.pause();
-                        playButton.textContent = 'Play';
+                marker1.addEventListener('hidden', () => {
+                    if (currentAudioPlayer && !currentAudioPlayer.paused) {
+                        currentAudioPlayer.pause();
                     }
-                    // 禁用播放按钮
+                    currentMarker = null;
+                    currentAudioPlayer = null;
+                    infoText.textContent = 'Scan a marker to display information';
+                    statusText.textContent = 'Waiting for marker...';
+                    disablePlayButton();
+                });
+
+                // Marker 2 事件
+                marker2.addEventListener('visible', () => {
+                    currentMarker = marker2;
+                    currentAudioPlayer = audioPlayer2;
+                    infoText.textContent = info2Text || 'No information available';
+                    statusText.textContent = `Marker 2 visible. Audio loaded: ${audio2Loaded}`;
+                    enablePlayButton();
+                });
+                marker2.addEventListener('hidden', () => {
+                    if (currentAudioPlayer && !currentAudioPlayer.paused) {
+                        currentAudioPlayer.pause();
+                    }
+                    currentMarker = null;
+                    currentAudioPlayer = null;
+                    infoText.textContent = 'Scan a marker to display information';
+                    statusText.textContent = 'Waiting for marker...';
                     disablePlayButton();
                 });
 
                 // 播放按钮事件
                 playButton.addEventListener('click', () => {
-                    if (isVisible) {
-                        if (audioPlayer.paused) {
-                            audioPlayer.play().catch(err => {
-                                console.error('Audio playback failed', err);
-                                alert('Cannot play audio without user interaction.');
+                    if (currentAudioPlayer) {
+                        if (currentAudioPlayer.paused) {
+                            currentAudioPlayer.play().catch(err => {
+                                console.error('Error playing audio', err);
+                                alert('Audio playback failed. User interaction is required.');
                             });
                             playButton.textContent = 'Pause';
                         } else {
-                            audioPlayer.pause();
+                            currentAudioPlayer.pause();
                             playButton.textContent = 'Play';
                         }
                     } else {
-                        alert('No marker detected.');
+                        alert('No audio to play.');
                     }
                 });
 
+                // 启用和禁用播放按钮
                 function enablePlayButton() {
                     playButton.disabled = false;
                     playButton.style.backgroundColor = '#007BFF';
@@ -122,9 +147,6 @@
                     playButton.style.cursor = 'not-allowed';
                     playButton.textContent = 'Play';
                 }
-
-                // 初始禁用播放按钮
-                disablePlayButton();
             }
         });
     </script>
@@ -132,9 +154,11 @@
 <body style="margin: 0px; overflow: hidden;">
     <button id="playButton" disabled>Play</button>
     <div id="infoText">Scan a marker to display information</div>
+    <div id="statusText">Waiting for marker...</div>
 
     <a-scene embedded arjs>
-        <a-marker id="marker1" preset="custom" url="pattern1.patt" emitevents="true" marker-handler>
+        <!-- 添加 emitevents="true" 属性 -->
+        <a-marker id="marker1" preset="custom" url="pattern1.patt" emitevents="true">
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
@@ -142,7 +166,7 @@
                 gltf-model="url(model1.gltf)">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="pattern2.patt" emitevents="true" marker-handler>
+        <a-marker id="marker2" preset="custom" url="pattern2.patt" emitevents="true">
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
@@ -152,5 +176,8 @@
         </a-marker>
         <a-entity camera></a-entity>
     </a-scene>
+
+    <audio id="audioPlayer1" src="audio1.mp3" preload="auto"></audio>
+    <audio id="audioPlayer2" src="audio2.mp3" preload="auto"></audio>
 </body>
 </html>
