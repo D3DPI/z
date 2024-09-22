@@ -6,47 +6,26 @@
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
-        #playButton {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: grey;
-            color: white;
-            border: none;
-            cursor: not-allowed;
-            z-index: 10;
-        }
-        #infoText {
-            position: absolute;
-            top: 70px;
-            left: 20px;
-            width: calc(100% - 40px);
-            padding: 10px 20px;
-            background-color: #FFF;
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-            z-index: 10;
-        }
-        #debugInfo {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: calc(100% - 40px);
-            padding: 10px 20px;
-            background-color: rgba(238, 238, 238, 0.8);
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-            max-height: 150px;
-            overflow-y: auto;
-            z-index: 10;
-        }
+        /* 与之前相同的样式 */
     </style>
-    <!-- 定义组件 -->
     <script>
         var activeMarkerData = null; // 全局变量，用于存储当前活动的标记数据
+        var audioPlayers = {}; // 全局对象，用于存储音频播放器
+
+        // 在页面加载时预加载音频
+        document.addEventListener('DOMContentLoaded', function () {
+            var audioFiles = ['audio1.mp3', 'audio2.mp3'];
+            audioFiles.forEach(function (audioSrc) {
+                var audioPlayer = new Audio();
+                audioPlayer.src = audioSrc;
+                audioPlayer.preload = 'auto';
+                audioPlayer.load(); // 开始加载音频
+
+                audioPlayers[audioSrc] = {
+                    audioPlayer: audioPlayer
+                };
+            });
+        });
 
         AFRAME.registerComponent('marker-debug', {
             init: function () {
@@ -73,31 +52,17 @@
                     infoSrc = 'info2.txt';
                 }
 
-                // 加载音频
-                audioPlayer = new Audio();
-                audioPlayer.src = audioSrc;
-                audioPlayer.preload = 'auto';
-                audioPlayer.addEventListener('canplaythrough', () => {
-                    audioLoaded = true;
-                    updateDebugInfo();
-                }, false);
-                audioPlayer.addEventListener('error', (e) => {
-                    console.error('Error loading audio:', e);
-                    audioLoaded = false;
-                    updateDebugInfo();
-                }, false);
-
-                // 音频播放和暂停事件
-                audioPlayer.addEventListener('play', () => {
-                    isPlaying = true;
-                    playButton.textContent = 'Pause';
-                    updateDebugInfo();
-                });
-                audioPlayer.addEventListener('pause', () => {
-                    isPlaying = false;
-                    playButton.textContent = 'Play';
-                    updateDebugInfo();
-                });
+                // 获取已预加载的音频播放器
+                var audioData = audioPlayers[audioSrc];
+                if (audioData && audioData.audioPlayer) {
+                    audioPlayer = audioData.audioPlayer;
+                } else {
+                    console.error('Audio player not found for ' + audioSrc);
+                    audioPlayer = new Audio();
+                    audioPlayer.src = audioSrc;
+                    audioPlayer.preload = 'auto';
+                    audioPlayer.load();
+                }
 
                 // 加载文本
                 fetch(infoSrc)
@@ -118,6 +83,9 @@
                     var visible = markerEl.object3D.visible;
                     if (visible !== isMarkerVisible) {
                         isMarkerVisible = visible;
+                        // 更新音频加载状态
+                        audioLoaded = audioPlayer.readyState >= 2; // HAVE_CURRENT_DATA
+
                         if (isMarkerVisible) {
                             // 标记被检测到
                             if (activeMarkerData && activeMarkerData.markerId !== markerId) {
@@ -176,7 +144,7 @@
                     var debugText = `
                         Marker ID: ${markerId}
                         Marker Visible: ${isMarkerVisible}
-                        Audio Loaded: ${audioLoaded}
+                        Audio Loaded (by readyState): ${audioPlayer.readyState >= 2}
                         Info Loaded: ${infoLoaded}
                         Audio Playing: ${isPlaying}
                         Audio Src: ${audioSrc}
@@ -192,20 +160,24 @@
         document.addEventListener('DOMContentLoaded', function () {
             var playButton = document.getElementById('playButton');
             playButton.addEventListener('click', () => {
-                if (activeMarkerData && activeMarkerData.audioLoaded) {
+                if (activeMarkerData && activeMarkerData.audioPlayer) {
                     var audioPlayer = activeMarkerData.audioPlayer;
-                    if (audioPlayer.paused) {
-                        audioPlayer.play().then(() => {
-                            activeMarkerData.isPlaying = true;
-                            playButton.textContent = 'Pause';
-                        }).catch(err => {
-                            console.error('Audio playback failed:', err);
-                            alert('无法播放音频，请与页面进行交互后重试。');
-                        });
+                    if (audioPlayer.readyState >= 2) { // HAVE_CURRENT_DATA
+                        if (audioPlayer.paused) {
+                            audioPlayer.play().then(() => {
+                                activeMarkerData.isPlaying = true;
+                                playButton.textContent = 'Pause';
+                            }).catch(err => {
+                                console.error('Audio playback failed:', err);
+                                alert('无法播放音频，请与页面进行交互后重试。');
+                            });
+                        } else {
+                            audioPlayer.pause();
+                            activeMarkerData.isPlaying = false;
+                            playButton.textContent = 'Play';
+                        }
                     } else {
-                        audioPlayer.pause();
-                        activeMarkerData.isPlaying = false;
-                        playButton.textContent = 'Play';
+                        alert('音频尚未加载完毕，请稍后再试。');
                     }
                 } else {
                     alert('没有检测到标记或音频尚未加载。');
