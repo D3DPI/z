@@ -15,52 +15,48 @@
             color: white;
             border: none;
             cursor: not-allowed;
+            z-index: 10;
         }
         #infoText {
             position: absolute;
-            top: 60px;
+            top: 70px;
             left: 20px;
-            width: 90%;
+            width: calc(100% - 40px);
             padding: 10px 20px;
             background-color: #FFF;
             color: #000;
             border: none;
             word-wrap: break-word;
+            z-index: 10;
         }
         #debugInfo {
             position: absolute;
-            top: 200px;
+            bottom: 20px;
             left: 20px;
-            width: 90%;
+            width: calc(100% - 40px);
             padding: 10px 20px;
-            background-color: #EEE;
+            background-color: rgba(238, 238, 238, 0.8);
             color: #000;
             border: none;
             word-wrap: break-word;
-            max-height: 200px;
+            max-height: 150px;
             overflow-y: auto;
+            z-index: 10;
         }
     </style>
     <!-- 定义组件 -->
     <script>
-        AFRAME.registerComponent('marker-debug', {
+        AFRAME.registerComponent('marker-handler', {
             init: function () {
                 // 获取元素
-                var markerEl = this.el;
-                var markerId = markerEl.getAttribute('id');
-                var audioPlayer = null;
-                var infoTextContent = '';
-                var isPlaying = false;
-                var debugInfoEl = document.getElementById('debugInfo');
-                var playButton = document.getElementById('playButton');
-                var infoTextEl = document.getElementById('infoText');
-                var isMarkerVisible = false;
-                var audioLoaded = false;
-                var infoLoaded = false;
+                const markerEl = this.el;
+                const markerId = markerEl.getAttribute('id');
+                const playButton = document.getElementById('playButton');
+                const infoTextEl = document.getElementById('infoText');
+                const debugInfoEl = document.getElementById('debugInfo');
 
-                // 根据 markerId 设置音频和文本文件路径
-                var audioSrc = '';
-                var infoSrc = '';
+                let audioSrc = '';
+                let infoSrc = '';
                 if (markerId === 'marker1') {
                     audioSrc = 'audio1.mp3';
                     infoSrc = 'info1.txt';
@@ -69,21 +65,37 @@
                     infoSrc = 'info2.txt';
                 }
 
-                // 加载音频
-                audioPlayer = new Audio();
-                audioPlayer.src = audioSrc;
+                let audioPlayer = new Audio(audioSrc);
                 audioPlayer.preload = 'auto';
+                let audioLoaded = false;
+                let isPlaying = false;
+                let infoTextContent = '';
+                let infoLoaded = false;
+                let isMarkerVisible = false;
+
                 audioPlayer.addEventListener('canplaythrough', () => {
                     audioLoaded = true;
                     updateDebugInfo();
-                }, false);
+                });
+
                 audioPlayer.addEventListener('error', (e) => {
                     console.error('Error loading audio:', e);
                     audioLoaded = false;
                     updateDebugInfo();
-                }, false);
+                });
 
-                // 加载文本
+                audioPlayer.addEventListener('play', () => {
+                    isPlaying = true;
+                    playButton.textContent = 'Pause';
+                    updateDebugInfo();
+                });
+
+                audioPlayer.addEventListener('pause', () => {
+                    isPlaying = false;
+                    playButton.textContent = 'Play';
+                    updateDebugInfo();
+                });
+
                 fetch(infoSrc)
                     .then(response => response.ok ? response.text() : '')
                     .then(data => {
@@ -97,57 +109,41 @@
                         updateDebugInfo();
                     });
 
-                // 播放按钮事件
                 playButton.addEventListener('click', () => {
-                    if (audioPlayer && isMarkerVisible) {
-                        if (audioPlayer.paused) {
-                            audioPlayer.play().then(() => {
-                                isPlaying = true;
-                                playButton.textContent = 'Pause';
-                                updateDebugInfo();
-                            }).catch(err => {
+                    if (audioLoaded && isMarkerVisible) {
+                        if (!isPlaying) {
+                            audioPlayer.play().catch(err => {
                                 console.error('Audio playback failed:', err);
-                                alert('Cannot play audio without user interaction.');
+                                alert('无法播放音频，请与页面进行交互后重试。');
                             });
                         } else {
                             audioPlayer.pause();
-                            isPlaying = false;
-                            playButton.textContent = 'Play';
-                            updateDebugInfo();
                         }
                     } else {
-                        alert('Marker not visible or audio not loaded.');
+                        alert('标记不可见或音频尚未加载。');
                     }
                 });
 
-                // 每一帧检查 marker 的可见性
-                this.tick = AFRAME.utils.throttleTick(function () {
-                    var visible = markerEl.object3D.visible;
-                    if (visible !== isMarkerVisible) {
-                        isMarkerVisible = visible;
-                        if (isMarkerVisible) {
-                            // Marker 被检测到
-                            infoTextEl.textContent = infoTextContent || 'No information available';
-                            enablePlayButton();
-                        } else {
-                            // Marker 丢失
-                            infoTextEl.textContent = 'Scan a marker to display information';
-                            disablePlayButton();
-                            if (audioPlayer && !audioPlayer.paused) {
-                                audioPlayer.pause();
-                                isPlaying = false;
-                                playButton.textContent = 'Play';
-                            }
-                        }
-                        updateDebugInfo();
+                markerEl.addEventListener('markerFound', () => {
+                    isMarkerVisible = true;
+                    infoTextEl.textContent = infoTextContent || 'No information available';
+                    enablePlayButton();
+                    updateDebugInfo();
+                });
+
+                markerEl.addEventListener('markerLost', () => {
+                    isMarkerVisible = false;
+                    disablePlayButton();
+                    if (audioPlayer && !audioPlayer.paused) {
+                        audioPlayer.pause();
                     }
-                }, 100); // 每100ms检查一次
+                    updateDebugInfo();
+                });
 
                 function enablePlayButton() {
                     playButton.disabled = false;
                     playButton.style.backgroundColor = '#007BFF';
                     playButton.style.cursor = 'pointer';
-                    playButton.textContent = 'Play';
                 }
 
                 function disablePlayButton() {
@@ -158,17 +154,18 @@
                 }
 
                 function updateDebugInfo() {
-                    var debugText = `
+                    const debugText = `
                         Marker ID: ${markerId}
                         Marker Visible: ${isMarkerVisible}
                         Audio Loaded: ${audioLoaded}
-                        Info Loaded: ${infoLoaded}
                         Audio Playing: ${isPlaying}
-                        Audio Src: ${audioSrc}
-                        Info Text Content: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
+                        Info Loaded: ${infoLoaded}
+                        Info Text: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
                     `;
                     debugInfoEl.textContent = debugText;
                 }
+
+                disablePlayButton();
             }
         });
     </script>
@@ -179,7 +176,7 @@
     <div id="debugInfo">Debug Info</div>
 
     <a-scene embedded arjs>
-        <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
+        <a-marker id="marker1" preset="custom" url="pattern1.patt" emitevents="true" marker-handler>
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
@@ -187,7 +184,7 @@
                 gltf-model="model1.gltf">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
+        <a-marker id="marker2" preset="custom" url="pattern2.patt" emitevents="true" marker-handler>
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
