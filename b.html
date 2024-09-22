@@ -3,248 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <title>岭南乐器增强现实视听工具</title>
-    <!-- 引入 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
-        #playButton {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: grey;
-            color: white;
-            border: none;
-            cursor: not-allowed;
-            z-index: 10;
-        }
-        #infoText {
-            position: absolute;
-            top: 70px;
-            left: 20px;
-            width: calc(100% - 40px);
-            padding: 10px 20px;
-            background-color: #FFF;
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-            z-index: 10;
-        }
+        #_0x5f4e{position:absolute;top:20px;left:20px;padding:10px 20px;background-color:grey;color:white;border:none;cursor:not-allowed;z-index:10}
+        #_0x3a2d{position:absolute;top:70px;left:20px;width:calc(100% - 40px);padding:10px 20px;background-color:#FFF;color:#000;border:none;word-wrap:break-word;z-index:10}
     </style>
     <script>
-        // 检测是否在微信浏览器中
-        function isWeixinBrowser() {
-            return /MicroMessenger/i.test(navigator.userAgent);
-        }
-
-        var inWeixinBrowser = isWeixinBrowser();
-
-        if (inWeixinBrowser) {
-            // 显示引导页面
-            document.addEventListener('DOMContentLoaded', function () {
-                document.body.innerHTML = `
-                    <div style="text-align:center;padding:20px;">
-                        <p>为了获得更好的体验，请点击右上角菜单，选择“在默认浏览器中打开”。</p>
-                    </div>
-                `;
+    var _0x1a8d=['userAgent','test','addEventListener','DOMContentLoaded','body','innerHTML','<div style="text-align:center;padding:20px;"><p>为了获得更好的体验，请点击右上角菜单，选择"在默认浏览器中打开"。</p></div>','forEach','src','preload','auto','load','click','readyState','paused','play','then','textContent','catch','error','Audio playback failed:','无法播放音频，请与页面进行交互后重试。','pause','音频尚未加载完毕，请稍后再试。','没有检测到标记或音频尚未加载。','model-loaded','getObject3D','mesh','rotation','set','degToRad','marker-debug','getAttribute','id','audio1.mp3','info1.txt','audio2.mp3','info2.txt','Audio player not found for ','ok','Error loading info text:','throttleTick','object3D','visible','No information available','style','disabled','backgroundColor','#007BFF','cursor','pointer','播放','grey','not-allowed','Play'];
+    (function(_0x5c0b30,_0x1a8d89){var _0x48b4cb=function(_0x85465){while(--_0x85465){_0x5c0b30['push'](_0x5c0b30['shift']());}};_0x48b4cb(++_0x1a8d89);}(_0x1a8d,0x1d3));
+    var _0x48b4=function(_0x5c0b30,_0x1a8d89){_0x5c0b30=_0x5c0b30-0x0;var _0x48b4cb=_0x1a8d[_0x5c0b30];return _0x48b4cb;};
+    
+    function _0x85465(){return /MicroMessenger/i[_0x48b4('0x1')](navigator[_0x48b4('0x0')]);}
+    var _0x3e7d9c=_0x85465();
+    if(_0x3e7d9c){
+        document[_0x48b4('0x2')](_0x48b4('0x3'),function(){
+            document[_0x48b4('0x4')][_0x48b4('0x5')]=_0x48b4('0x6');
+        });
+    } else {
+        var _0x2f7a9e = null;
+        var _0x1f3d9f = {};
+        document[_0x48b4('0x2')](_0x48b4('0x3'), function(){
+            var _0x85465=['audio1.mp3','audio2.mp3'];
+            _0x85465[_0x48b4('0x7')](function(_0x3e7d9c){
+                var _0x2f7a9e=new Audio();
+                _0x2f7a9e[_0x48b4('0x8')]=_0x3e7d9c;
+                _0x2f7a9e[_0x48b4('0x9')]=_0x48b4('0xa');
+                _0x2f7a9e[_0x48b4('0xb')]();
+                _0x1f3d9f[_0x3e7d9c]={'audioPlayer':_0x2f7a9e};
             });
-        } else {
-            // 非微信浏览器，正常加载页面内容
-
-            var activeMarkerData = null; // 全局变量，用于存储当前活动的标记数据
-            var audioPlayers = {}; // 全局对象，用于存储音频播放器
-
-            // 在页面加载时预加载音频
-            document.addEventListener('DOMContentLoaded', function () {
-                var audioFiles = ['audio1.mp3', 'audio2.mp3'];
-                audioFiles.forEach(function (audioSrc) {
-                    var audioPlayer = new Audio();
-                    audioPlayer.src = audioSrc;
-                    audioPlayer.preload = 'auto';
-                    audioPlayer.load(); // 开始加载音频
-
-                    audioPlayers[audioSrc] = {
-                        audioPlayer: audioPlayer
-                    };
-                });
-
-                // 添加播放按钮的事件监听器
-                var playButton = document.getElementById('playButton');
-                playButton.addEventListener('click', () => {
-                    if (activeMarkerData && activeMarkerData.audioPlayer) {
-                        var audioPlayer = activeMarkerData.audioPlayer;
-                        if (audioPlayer.readyState >= 2) { // HAVE_CURRENT_DATA
-                            if (audioPlayer.paused) {
-                                audioPlayer.play().then(() => {
-                                    activeMarkerData.isPlaying = true;
-                                    playButton.textContent = '暂停';
-                                }).catch(err => {
-                                    console.error('Audio playback failed:', err);
-                                    alert('无法播放音频，请与页面进行交互后重试。');
-                                });
-                            } else {
-                                audioPlayer.pause();
-                                activeMarkerData.isPlaying = false;
-                                playButton.textContent = '播放';
-                            }
+            var _0x34e280=document['getElementById']('_0x5f4e');
+            _0x34e280[_0x48b4('0x2')](_0x48b4('0xc'),()=>{
+                if(_0x2f7a9e && _0x2f7a9e['audioPlayer']){
+                    var _0x85465=_0x2f7a9e['audioPlayer'];
+                    if(_0x85465[_0x48b4('0xd')]>=0x2){
+                        if(_0x85465[_0x48b4('0xe')]){
+                            _0x85465[_0x48b4('0xf')]()[_0x48b4('0x10')](()=>{
+                                _0x2f7a9e['isPlaying']=true;
+                                _0x34e280[_0x48b4('0x11')]='暂停';
+                            })[_0x48b4('0x12')](_0x3e7d9c=>{
+                                console[_0x48b4('0x13')](_0x48b4('0x14'),_0x3e7d9c);
+                                alert(_0x48b4('0x15'));
+                            });
                         } else {
-                            alert('音频尚未加载完毕，请稍后再试。');
+                            _0x85465[_0x48b4('0x16')]();
+                            _0x2f7a9e['isPlaying']=false;
+                            _0x34e280[_0x48b4('0x11')]=_0x48b4('0x35');
                         }
                     } else {
-                        alert('没有检测到标记或音频尚未加载。');
+                        alert(_0x48b4('0x17'));
                     }
+                } else {
+                    alert(_0x48b4('0x18'));
+                }
+            });
+        });
+
+        AFRAME['registerComponent']('set-model-rotation',{
+            'schema':{'x':{'type':'number','default':0x0},'y':{'type':'number','default':0x0},'z':{'type':'number','default':0x0}},
+            'init':function(){
+                var _0x85465=this['el'];
+                var _0x3e7d9c=this['data'];
+                _0x85465[_0x48b4('0x2')](_0x48b4('0x19'),function(_0x2f7a9e){
+                    var _0x1f3d9f=_0x85465[_0x48b4('0x1a')](_0x48b4('0x1b'));
+                    if(!_0x1f3d9f)return;
+                    _0x1f3d9f[_0x48b4('0x1c')][_0x48b4('0x1d')](
+                        THREE['Math'][_0x48b4('0x1e')](_0x3e7d9c['x']),
+                        THREE['Math'][_0x48b4('0x1e')](_0x3e7d9c['y']),
+                        THREE['Math'][_0x48b4('0x1e')](_0x3e7d9c['z'])
+                    );
                 });
-            });
+            }
+        });
 
-            // 自定义组件，用于在模型加载后设置模型的旋转
-            AFRAME.registerComponent('set-model-rotation', {
-                schema: {
-                    x: { type: 'number', default: 0 },
-                    y: { type: 'number', default: 0 },
-                    z: { type: 'number', default: 0 }
-                },
-                init: function () {
-                    var el = this.el;
-                    var data = this.data;
-
-                    el.addEventListener('model-loaded', function(e) {
-                        var model = el.getObject3D('mesh');
-                        if (!model) return;
-                        model.rotation.set(
-                            THREE.Math.degToRad(data.x),
-                            THREE.Math.degToRad(data.y),
-                            THREE.Math.degToRad(data.z)
-                        );
+        AFRAME['registerComponent'](_0x48b4('0x1f'),{
+            'init':function(){
+                var _0x85465=this['el'];
+                var _0x3e7d9c=_0x85465[_0x48b4('0x20')](_0x48b4('0x21'));
+                var _0x2f7a9e=null;
+                var _0x4a9e9c='';
+                var _0x4e83e4=false;
+                var _0x34e280=document['getElementById']('_0x5f4e');
+                var _0x223d06=document['getElementById']('_0x3a2d');
+                var _0x42a934=false;
+                var _0x15f8aa=false;
+                var _0x4cbb6a=false;
+                var _0x3527d9='';
+                var _0x52f6e7='';
+                if(_0x3e7d9c==='marker1'){
+                    _0x3527d9=_0x48b4('0x22');
+                    _0x52f6e7=_0x48b4('0x23');
+                } else if(_0x3e7d9c==='marker2'){
+                    _0x3527d9=_0x48b4('0x24');
+                    _0x52f6e7=_0x48b4('0x25');
+                }
+                var _0x379c3b=_0x1f3d9f[_0x3527d9];
+                if(_0x379c3b && _0x379c3b['audioPlayer']){
+                    _0x2f7a9e=_0x379c3b['audioPlayer'];
+                } else {
+                    console[_0x48b4('0x13')](_0x48b4('0x26')+_0x3527d9);
+                    _0x2f7a9e=new Audio();
+                    _0x2f7a9e[_0x48b4('0x8')]=_0x3527d9;
+                    _0x2f7a9e[_0x48b4('0x9')]=_0x48b4('0xa');
+                    _0x2f7a9e[_0x48b4('0xb')]();
+                }
+                fetch(_0x52f6e7)
+                    .then(_0x85465=>_0x85465[_0x48b4('0x27')]?_0x85465['text']:'')
+                    .then(_0x85465=>{
+                        _0x4a9e9c=_0x85465;
+                        _0x4cbb6a=true;
+                    })
+                    .catch(_0x85465=>{
+                        console[_0x48b4('0x13')](_0x48b4('0x28'),_0x85465);
+                        _0x4cbb6a=false;
                     });
-                }
-            });
-
-            AFRAME.registerComponent('marker-debug', {
-                init: function () {
-                    var markerEl = this.el;
-                    var markerId = markerEl.getAttribute('id');
-                    var audioPlayer = null;
-                    var infoTextContent = '';
-                    var isPlaying = false;
-                    var playButton = document.getElementById('playButton');
-                    var infoTextEl = document.getElementById('infoText');
-                    var isMarkerVisible = false;
-                    var audioLoaded = false;
-                    var infoLoaded = false;
-
-                    // 根据 markerId 设置音频和文本文件路径
-                    var audioSrc = '';
-                    var infoSrc = '';
-                    if (markerId === 'marker1') {
-                        audioSrc = 'audio1.mp3';
-                        infoSrc = 'info1.txt';
-                    } else if (markerId === 'marker2') {
-                        audioSrc = 'audio2.mp3';
-                        infoSrc = 'info2.txt';
-                    }
-
-                    // 获取已预加载的音频播放器
-                    var audioData = audioPlayers[audioSrc];
-                    if (audioData && audioData.audioPlayer) {
-                        audioPlayer = audioData.audioPlayer;
-                    } else {
-                        console.error('Audio player not found for ' + audioSrc);
-                        audioPlayer = new Audio();
-                        audioPlayer.src = audioSrc;
-                        audioPlayer.preload = 'auto';
-                        audioPlayer.load();
-                    }
-
-                    // 加载文本
-                    fetch(infoSrc)
-                        .then(response => response.ok ? response.text() : '')
-                        .then(data => {
-                            infoTextContent = data;
-                            infoLoaded = true;
-                        })
-                        .catch(err => {
-                            console.error('Error loading info text:', err);
-                            infoLoaded = false;
-                        });
-
-                    // 每一帧检查 marker 的可见性
-                    this.tick = AFRAME.utils.throttleTick(function () {
-                        var visible = markerEl.object3D.visible;
-                        if (visible !== isMarkerVisible) {
-                            isMarkerVisible = visible;
-                            // 更新音频加载状态
-                            audioLoaded = audioPlayer.readyState >= 2; // HAVE_CURRENT_DATA
-
-                            if (isMarkerVisible) {
-                                // 标记被检测到
-                                if (activeMarkerData && activeMarkerData.markerId !== markerId) {
-                                    // 如果有其他活动的标记，暂停其音频
-                                    if (activeMarkerData.audioPlayer && !activeMarkerData.audioPlayer.paused) {
-                                        activeMarkerData.audioPlayer.pause();
-                                        activeMarkerData.isPlaying = false;
-                                    }
+                
+                this['tick']=AFRAME['utils'][_0x48b4('0x29')](function(){
+                    var _0x85465=_0x85465[_0x48b4('0x2a')][_0x48b4('0x2b')];
+                    if(_0x85465!==_0x42a934){
+                        _0x42a934=_0x85465;
+                        _0x15f8aa=_0x2f7a9e[_0x48b4('0xd')]>=0x2;
+                        if(_0x42a934){
+                            if(_0x2f7a9e && _0x2f7a9e['markerId']!==_0x3e7d9c){
+                                if(_0x2f7a9e['audioPlayer'] && !_0x2f7a9e['audioPlayer'][_0x48b4('0xe')]){
+                                    _0x2f7a9e['audioPlayer'][_0x48b4('0x16')]();
+                                    _0x2f7a9e['isPlaying']=false;
                                 }
-                                // 更新全局的 activeMarkerData
-                                activeMarkerData = {
-                                    markerId: markerId,
-                                    audioPlayer: audioPlayer,
-                                    infoTextContent: infoTextContent,
-                                    isPlaying: isPlaying,
-                                    audioLoaded: audioLoaded,
-                                    infoLoaded: infoLoaded
-                                };
-                                // 更新信息文本
-                                infoTextEl.textContent = infoTextContent || 'No information available';
-                                enablePlayButton();
-                            } else {
-                                // 标记丢失，保持当前文本和音频状态不变
-                                // 不做任何处理，确保文本和音频播放稳定
                             }
+                            _0x2f7a9e={
+                                'markerId':_0x3e7d9c,
+                                'audioPlayer':_0x2f7a9e,
+                                'infoTextContent':_0x4a9e9c,
+                                'isPlaying':_0x4e83e4,
+                                'audioLoaded':_0x15f8aa,
+                                'infoLoaded':_0x4cbb6a
+                            };
+                            _0x223d06[_0x48b4('0x11')]=_0x4a9e9c||_0x48b4('0x2c');
+                            _0x4e1c16();
                         }
-                    }, 100); // 每100ms检查一次
-
-                    function enablePlayButton() {
-                        playButton.disabled = false;
-                        playButton.style.backgroundColor = '#007BFF';
-                        playButton.style.cursor = 'pointer';
-                        playButton.textContent = isPlaying ? '暂停' : '播放';
                     }
-
-                    function disablePlayButton() {
-                        playButton.disabled = true;
-                        playButton.style.backgroundColor = 'grey';
-                        playButton.style.cursor = 'not-allowed';
-                        playButton.textContent = 'Play';
-                    }
+                },0x64);
+                
+                function _0x4e1c16(){
+                    _0x34e280[_0x48b4('0x2d')][_0x48b4('0x2e')]=false;
+                    _0x34e280[_0x48b4('0x2d')][_0x48b4('0x2f')]=_0x48b4('0x30');
+                    _0x34e280[_0x48b4('0x2d')][_0x48b4('0x31')]=_0x48b4('0x32');
+                    _0x34e280[_0x48b4('0x11')]=_0x4e83e4?'暂停':_0x48b4('0x33');
                 }
-            });
-        }
+                
+                function _0x5f4e16(){
+                    _0x34e280[_0x48b4('0x2d')][_0x48b4('0x2e')]=true;
+                    _0x34e280[_0x48b4('0x2d')][_0x48b4('0x2f')]=_0x48b4('0x34');
+                    _0x34e280[_0x48b4('0x2d')][_0x48b4('0x31')]=_0x48b4('0x35');
+                    _0x34e280[_0x48b4('0x11')]=_0x48b4('0x36');
+                }
+            }
+        });
+    }
     </script>
 </head>
 <body style="margin: 0; overflow: hidden;">
-    <button id="playButton" disabled>播放</button>
-    <div id="infoText">请用摄像头对准“岭南乐器码”</div>
-
-    <!-- 修改后的 a-scene 标签，隐藏 AR.js 调试信息和 VR 模式按钮 -->
-    <!-- 添加 sourceType: webcam; videoTexture: true; 以提高兼容性 -->
+    <button id="_0x5f4e" disabled>播放</button>
+    <div id="_0x3a2d">请用摄像头对准"岭南乐器码"</div>
     <a-scene embedded arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" vr-mode-ui="enabled: false">
         <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
-            <a-entity id="model1"
-                position="0 0 0"
-                scale="0.02 0.02 0.02"
-                gltf-model="model1.gltf"
-                set-model-rotation="x:0; y:0; z:0">
-            </a-entity>
+            <a-entity id="model1" position="0 0 0" scale="0.02 0.02 0.02" gltf-model="model1.gltf" set-model-rotation="x:0; y:0; z:0"></a-entity>
         </a-marker>
         <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
-            <a-entity id="model2"
-                position="0 0 0"
-                scale="0.013 0.013 0.013"
-                gltf-model="model2.gltf"
-                set-model-rotation="x:0; y:0; z:0">
-            </a-entity>
+            <a-entity id="model2" position="0 0 0" scale="0.013 0.013 0.013" gltf-model="model2.gltf" set-model-rotation="x:0; y:0; z:0"></a-entity>
         </a-marker>
-        <a-entity camera></a-entity>
-    </a-scene>
-</body>
-</html>
