@@ -94,9 +94,9 @@
                 });
         };
 
-        // 使用 window.load 事件，确保所有资源已加载
-        window.addEventListener('load', () => {
-            console.log('Window fully loaded and parsed');
+        // 使用 window.addEventListener('DOMContentLoaded', ...) 确保DOM已加载
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM fully loaded and parsed');
 
             const marker1 = document.getElementById('marker1');
             const model1 = document.getElementById('model1');
@@ -257,18 +257,14 @@
                 }
             };
 
-            // 确保实体已加载后再附加事件监听器
-            marker1.addEventListener('loaded', () => {
-                marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
-                marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
-                console.log('Event listeners attached for marker1');
-            });
+            // **立即**附加事件监听器，而不是等待loaded事件
+            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
+            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
+            console.log('Event listeners attached for marker1');
 
-            marker2.addEventListener('loaded', () => {
-                marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
-                marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
-                console.log('Event listeners attached for marker2');
-            });
+            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
+            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
+            console.log('Event listeners attached for marker2');
 
             playButton.addEventListener('click', () => {
                 console.log('Play button clicked');
