@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>15</title>
+    <title>Custom AR.js Pattern Marker</title>
     <!-- 只加载aframe和aframe-ar，不加载three.min.js和GLTFLoader.js -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
@@ -50,8 +49,8 @@
         <a-entity camera></a-entity>
     </a-scene>
     
-    <audio id="audioPlayer1" src="audio1.mp3"></audio>
-    <audio id="audioPlayer2" src="audio2.mp3"></audio>
+    <audio id="audioPlayer1" src="audio1.mp3" preload="auto"></audio>
+    <audio id="audioPlayer2" src="audio2.mp3" preload="auto"></audio>
     <button id="playButton" disabled>Play</button>
     <div id="infoText">Scan a marker to display information</div>
 
@@ -85,8 +84,9 @@
                 });
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM fully loaded and parsed');
+        // 使用 window.load 事件，确保所有资源已加载
+        window.addEventListener('load', () => {
+            console.log('Window fully loaded and parsed');
 
             const marker1 = document.getElementById('marker1');
             const model1 = document.getElementById('model1');
@@ -115,7 +115,10 @@
                                 return '';
                             }
                         })
-                        .then(data => { info1Text = data; })
+                        .then(data => { 
+                            info1Text = data; 
+                            console.log('info1Text loaded:', info1Text);
+                        })
                         .catch(err => {
                             console.error('Error fetching info1.txt:', err);
                             info1Text = '';
@@ -129,7 +132,10 @@
                                 return '';
                             }
                         })
-                        .then(data => { info2Text = data; })
+                        .then(data => { 
+                            info2Text = data; 
+                            console.log('info2Text loaded:', info2Text);
+                        })
                         .catch(err => {
                             console.error('Error fetching info2.txt:', err);
                             info2Text = '';
@@ -181,6 +187,7 @@
                 currentMarker = marker;
                 currentAudioPlayer = audioPlayer;
                 infoText.textContent = infoTextContent || 'No information available';
+                console.log('Info text updated:', infoText.textContent);
                 // 不自动播放音频，遵循浏览器自动播放策略
             };
 
@@ -196,11 +203,18 @@
                 }
             };
 
-            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
-            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
+            // 确保实体已加载后再附加事件监听器
+            marker1.addEventListener('loaded', () => {
+                marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
+                marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
+                console.log('Event listeners attached for marker1');
+            });
 
-            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
-            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
+            marker2.addEventListener('loaded', () => {
+                marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
+                marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
+                console.log('Event listeners attached for marker2');
+            });
 
             playButton.addEventListener('click', () => {
                 console.log('Play button clicked');
