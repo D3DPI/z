@@ -1,122 +1,230 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>AR.js Custom Marker Based AR</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom AR.js Pattern Marker</title>
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
-        #infoText {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 9999;
-        }
         #playButton {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 20px;
+            left: 20px;
             padding: 10px 20px;
-            font-size: 18px;
-            background-color: #4CAF50;
+            background-color: grey;
             color: white;
             border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 9999;
-            display: none;
+            cursor: not-allowed;
+        }
+        #infoText {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #FFF;
+            color: #000;
+            border: none;
         }
     </style>
 </head>
-<body style="margin: 0; overflow: hidden;">
-    <div id="infoText">Scan a marker to display information</div>
-    <button id="playButton">Play Audio</button>
-
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-        <a-assets>
-            <a-asset-item id="model1" src="model1.gltf"></a-asset-item>
-            <a-asset-item id="model2" src="model2.gltf"></a-asset-item>
-            <audio id="audio1" src="audio1.mp3"></audio>
-            <audio id="audio2" src="audio2.mp3"></audio>
-        </a-assets>
-
-        <a-marker type="pattern" url="pattern1.patt" id="marker1">
-            <a-entity gltf-model="#model1" scale="1 1 1"></a-entity>
+<body style="margin: 0px; overflow: hidden;">
+    <a-scene embedded arjs>
+        <a-marker id="marker1" preset="custom" url="pattern1.patt">
+            <a-entity id="model1"
+                position="0 0 0"
+                rotation="0 0 0"
+                scale="0.02 0.02 0.02"
+                gltf-model="url(model1.gltf)">
+            </a-entity>
         </a-marker>
-
-        <a-marker type="pattern" url="pattern2.patt" id="marker2">
-            <a-entity gltf-model="#model2" scale="1 1 1"></a-entity>
+        <a-marker id="marker2" preset="custom" url="pattern2.patt">
+            <a-entity id="model2"
+                position="0 0 0"
+                rotation="0 0 0"
+                scale="0.02 0.02 0.02"
+                gltf-model="url(model2.gltf)">
+            </a-entity>
         </a-marker>
-
         <a-entity camera></a-entity>
     </a-scene>
+    
+    <audio id="audioPlayer1" src="audio1.mp3"></audio>
+    <audio id="audioPlayer2" src="audio2.mp3"></audio>
+    <button id="playButton" disabled>Play</button>
+    <div id="infoText">Scan a marker to display information</div>
 
     <script>
-        const infoText = document.getElementById('infoText');
-        const playButton = document.getElementById('playButton');
-        let currentAudio = null;
-        let currentMarker = null;
-
-        function loadTextFile(url, callback) {
-            fetch(url)
-                .then(response => response.text())
-                .then(text => callback(text))
-                .catch(error => console.error('Error loading text file:', error));
+        // Function to select the desired camera
+        async function getCameraConstraints() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            const mainCamera = videoDevices.find(device => device.label.toLowerCase().includes('back')) || videoDevices[0];
+            
+            return {
+                video: {
+                    deviceId: mainCamera.deviceId
+                }
+            };
         }
 
-        AFRAME.registerComponent('marker-handler', {
-            init: function () {
-                const marker = this.el;
-
-                marker.addEventListener('markerFound', () => {
-                    const markerId = marker.id;
-                    currentMarker = markerId;
-                    const audioId = `audio${markerId.slice(-1)}`;
-                    currentAudio = document.getElementById(audioId);
-                    
-                    loadTextFile(`info${markerId.slice(-1)}.txt`, (text) => {
-                        infoText.textContent = text;
-                    });
-
-                    playButton.style.display = 'block';
-                    console.log('Marker found:', markerId);
+        // Override AR.js default camera constraints
+        ARjs.Context.prototype._initSource = async function(onReady) {
+            const constraints = await getCameraConstraints();
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then((stream) => {
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.play();
+                    onReady(video);
+                })
+                .catch((err) => {
+                    console.error("Error accessing camera: ", err);
                 });
+        };
 
-                marker.addEventListener('markerLost', () => {
-                    if (currentMarker === marker.id) {
-                        infoText.textContent = 'Scan a marker to display information';
-                        playButton.style.display = 'none';
-                        if (currentAudio) {
-                            currentAudio.pause();
-                            currentAudio.currentTime = 0;
-                        }
-                        currentMarker = null;
-                        currentAudio = null;
-                    }
-                    console.log('Marker lost:', marker.id);
-                });
-            }
-        });
-
-        playButton.addEventListener('click', () => {
-            if (currentAudio) {
-                currentAudio.play();
-                console.log('Playing audio for', currentMarker);
-            }
-        });
-
-        // Add marker-handler component to all markers
         document.addEventListener('DOMContentLoaded', () => {
-            const markers = document.querySelectorAll('a-marker');
-            markers.forEach(marker => {
-                marker.setAttribute('marker-handler', '');
+            console.log('DOM fully loaded and parsed');
+
+            const marker1 = document.getElementById('marker1');
+            const model1 = document.getElementById('model1');
+            const audioPlayer1 = document.getElementById('audioPlayer1');
+
+            const marker2 = document.getElementById('marker2');
+            const model2 = document.getElementById('model2');
+            const audioPlayer2 = document.getElementById('audioPlayer2');
+
+            const playButton = document.getElementById('playButton');
+            const infoText = document.getElementById('infoText');
+
+            let isPlaying = false;
+            let currentAudioPlayer = null;
+            let currentMarker = null;
+            let info1Text = '';
+            let info2Text = '';
+
+            const preloadResources = () => {
+                return Promise.all([
+                    fetch('info1.txt').then(response => response.text()).then(data => { info1Text = data; }),
+                    fetch('info2.txt').then(response => response.text()).then(data => { info2Text = data; }),
+                    new Promise(resolve => {
+                        const audio1 = new Audio('audio1.mp3');
+                        audio1.addEventListener('canplaythrough', resolve, { once: true });
+                    }),
+                    new Promise(resolve => {
+                        const audio2 = new Audio('audio2.mp3');
+                        audio2.addEventListener('canplaythrough', resolve, { once: true });
+                    }),
+                    new Promise(resolve => {
+                        const loader = new THREE.GLTFLoader();
+                        loader.load('model1.gltf', resolve);
+                    }),
+                    new Promise(resolve => {
+                        const loader = new THREE.GLTFLoader();
+                        loader.load('model2.gltf', resolve);
+                    })
+                ]);
+            };
+
+            preloadResources().then(() => {
+                console.log('All resources preloaded');
+                enablePlayButton();
+            }).catch(err => {
+                console.error('Error preloading resources', err);
             });
-            console.log('Marker handlers added');
+
+            const enablePlayButton = () => {
+                playButton.disabled = false;
+                playButton.style.backgroundColor = '#007BFF';
+                playButton.style.cursor = 'pointer';
+                playButton.textContent = 'Play';
+            };
+
+            const disablePlayButton = () => {
+                playButton.disabled = true;
+                playButton.style.backgroundColor = 'grey';
+                playButton.style.cursor = 'not-allowed';
+                playButton.textContent = 'Play';
+            };
+
+            const playAudio = (audioPlayer) => {
+                if (currentAudioPlayer && currentAudioPlayer !== audioPlayer) {
+                    currentAudioPlayer.pause();
+                }
+                audioPlayer.play();
+                playButton.textContent = 'Pause';
+                currentAudioPlayer = audioPlayer;
+            };
+
+            const pauseAudio = (audioPlayer) => {
+                audioPlayer.pause();
+                playButton.textContent = 'Play';
+            };
+
+            const markerFound = (marker, audioPlayer, infoTextContent) => {
+                if (currentMarker && currentMarker !== marker) {
+                    currentMarker.emit('markerLost');
+                }
+                console.log(`Marker ${marker.id} found`);
+                currentMarker = marker;
+                currentAudioPlayer = audioPlayer;
+                infoText.textContent = infoTextContent;
+                if (isPlaying) {
+                    playAudio(audioPlayer);
+                }
+            };
+
+            const markerLost = (marker, audioPlayer) => {
+                console.log(`Marker ${marker.id} lost`);
+                if (currentMarker === marker) {
+                    infoText.textContent = 'Scan a marker to display information';
+                    if (!audioPlayer.paused) {
+                        isPlaying = true;
+                        pauseAudio(audioPlayer);
+                    } else {
+                        isPlaying = false;
+                    }
+                    currentMarker = null;
+                    currentAudioPlayer = null;
+                }
+            };
+
+            marker1.addEventListener('markerFound', () => markerFound(marker1, audioPlayer1, info1Text));
+            marker1.addEventListener('markerLost', () => markerLost(marker1, audioPlayer1));
+
+            marker2.addEventListener('markerFound', () => markerFound(marker2, audioPlayer2, info2Text));
+            marker2.addEventListener('markerLost', () => markerLost(marker2, audioPlayer2));
+
+            playButton.addEventListener('click', () => {
+                console.log('Play button clicked');
+                if (currentAudioPlayer) {
+                    if (currentAudioPlayer.paused) {
+                        playAudio(currentAudioPlayer);
+                    } else {
+                        pauseAudio(currentAudioPlayer);
+                    }
+                } else {
+                    console.log('No audio player selected');
+                }
+            });
+
+            model1.addEventListener('click', () => {
+                console.log('Model 1 clicked');
+                if (audioPlayer1.paused) {
+                    playAudio(audioPlayer1);
+                } else {
+                    pauseAudio(audioPlayer1);
+                }
+            });
+
+            model2.addEventListener('click', () => {
+                console.log('Model 2 clicked');
+                if (audioPlayer2.paused) {
+                    playAudio(audioPlayer2);
+                } else {
+                    pauseAudio(audioPlayer2);
+                }
+            });
         });
     </script>
 </body>
