@@ -46,8 +46,7 @@
         <!-- 定义一个名为 markerhandler 的组件 -->
         <a-entity id="markerHandler" markerhandler></a-entity>
 
-        <!-- 添加 emitevents="true" 属性 -->
-        <a-marker id="marker1" preset="custom" url="pattern1.patt" emitevents="true">
+        <a-marker id="marker1" preset="custom" url="pattern1.patt">
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
@@ -55,7 +54,7 @@
                 gltf-model="url(model1.gltf)">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="pattern2.patt" emitevents="true">
+        <a-marker id="marker2" preset="custom" url="pattern2.patt">
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
@@ -107,14 +106,20 @@
                 audioPlayer2.oncanplaythrough = () => { audio2Loaded = true; };
 
                 // Marker 1 事件
-                marker1.addEventListener('markerFound', () => {
+                marker1.addEventListener('visible', () => {
                     currentMarker = marker1;
                     currentAudioPlayer = audioPlayer1;
                     infoText.textContent = info1Text || 'No information available';
-                    statusText.textContent = `Marker 1 found. Audio loaded: ${audio1Loaded}`;
+                    statusText.textContent = `Marker 1 visible. Audio loaded: ${audio1Loaded}`;
                     enablePlayButton();
                 });
+                marker1.addEventListener('markerFound', () => {
+                    console.log('Marker 1 found');
+                });
                 marker1.addEventListener('markerLost', () => {
+                    console.log('Marker 1 lost');
+                });
+                marker1.addEventListener('hidden', () => {
                     if (currentAudioPlayer && !currentAudioPlayer.paused) {
                         currentAudioPlayer.pause();
                     }
@@ -126,14 +131,14 @@
                 });
 
                 // Marker 2 事件
-                marker2.addEventListener('markerFound', () => {
+                marker2.addEventListener('visible', () => {
                     currentMarker = marker2;
                     currentAudioPlayer = audioPlayer2;
                     infoText.textContent = info2Text || 'No information available';
-                    statusText.textContent = `Marker 2 found. Audio loaded: ${audio2Loaded}`;
+                    statusText.textContent = `Marker 2 visible. Audio loaded: ${audio2Loaded}`;
                     enablePlayButton();
                 });
-                marker2.addEventListener('markerLost', () => {
+                marker2.addEventListener('hidden', () => {
                     if (currentAudioPlayer && !currentAudioPlayer.paused) {
                         currentAudioPlayer.pause();
                     }
