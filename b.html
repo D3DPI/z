@@ -46,9 +46,10 @@
     </style>
     <!-- 定义组件 -->
     <script>
+        var activeMarkerData = null; // 全局变量，用于存储当前活动的标记数据
+
         AFRAME.registerComponent('marker-debug', {
             init: function () {
-                // 获取元素
                 var markerEl = this.el;
                 var markerId = markerEl.getAttribute('id');
                 var audioPlayer = null;
@@ -112,44 +113,56 @@
                         updateDebugInfo();
                     });
 
-                // 播放按钮事件
-                playButton.addEventListener('click', () => {
-                    if (audioLoaded && isMarkerVisible) {
-                        if (!isPlaying) {
-                            audioPlayer.play().catch(err => {
-                                console.error('Audio playback failed:', err);
-                                alert('无法播放音频，请与页面进行交互后重试。');
-                            });
+                // 每一帧检查 marker 的可见性
+                this.tick = AFRAME.utils.throttleTick(function () {
+                    var visible = markerEl.object3D.visible;
+                    if (visible !== isMarkerVisible) {
+                        isMarkerVisible = visible;
+                        if (isMarkerVisible) {
+                            // 标记被检测到
+                            if (activeMarkerData && activeMarkerData.markerId !== markerId) {
+                                // 如果有其他活动的标记，暂停其音频
+                                if (activeMarkerData.audioPlayer && !activeMarkerData.audioPlayer.paused) {
+                                    activeMarkerData.audioPlayer.pause();
+                                    activeMarkerData.isPlaying = false;
+                                }
+                            }
+                            // 更新全局的 activeMarkerData
+                            activeMarkerData = {
+                                markerId: markerId,
+                                audioPlayer: audioPlayer,
+                                infoTextContent: infoTextContent,
+                                isPlaying: isPlaying,
+                                audioLoaded: audioLoaded,
+                                infoLoaded: infoLoaded
+                            };
+                            // 更新信息文本
+                            infoTextEl.textContent = infoTextContent || 'No information available';
+                            enablePlayButton();
                         } else {
-                            audioPlayer.pause();
+                            // 标记丢失
+                            if (activeMarkerData && activeMarkerData.markerId === markerId) {
+                                // 当前活动的标记丢失，重置 activeMarkerData
+                                activeMarkerData = null;
+                                // 重置信息文本
+                                infoTextEl.textContent = 'Scan a marker to display information';
+                                disablePlayButton();
+                                if (audioPlayer && !audioPlayer.paused) {
+                                    audioPlayer.pause();
+                                    isPlaying = false;
+                                    playButton.textContent = 'Play';
+                                }
+                            }
                         }
-                    } else {
-                        alert('标记不可见或音频尚未加载。');
+                        updateDebugInfo();
                     }
-                });
-
-                // 监听 markerFound 和 markerLost 事件
-                markerEl.addEventListener('markerFound', () => {
-                    isMarkerVisible = true;
-                    infoTextEl.textContent = infoTextContent || 'No information available';
-                    enablePlayButton();
-                    updateDebugInfo();
-                });
-
-                markerEl.addEventListener('markerLost', () => {
-                    isMarkerVisible = false;
-                    disablePlayButton();
-                    if (audioPlayer && !audioPlayer.paused) {
-                        audioPlayer.pause();
-                    }
-                    infoTextEl.textContent = 'Scan a marker to display information';
-                    updateDebugInfo();
-                });
+                }, 100); // 每100ms检查一次
 
                 function enablePlayButton() {
                     playButton.disabled = false;
                     playButton.style.backgroundColor = '#007BFF';
                     playButton.style.cursor = 'pointer';
+                    playButton.textContent = isPlaying ? 'Pause' : 'Play';
                 }
 
                 function disablePlayButton() {
@@ -168,13 +181,36 @@
                         Audio Playing: ${isPlaying}
                         Audio Src: ${audioSrc}
                         Info Text Content: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
+                        Active Marker ID: ${activeMarkerData ? activeMarkerData.markerId : 'None'}
                     `;
                     debugInfoEl.textContent = debugText;
                 }
-
-                // 初始化时禁用播放按钮
-                disablePlayButton();
             }
+        });
+
+        // 播放按钮事件监听器，只添加一次
+        document.addEventListener('DOMContentLoaded', function () {
+            var playButton = document.getElementById('playButton');
+            playButton.addEventListener('click', () => {
+                if (activeMarkerData && activeMarkerData.audioLoaded) {
+                    var audioPlayer = activeMarkerData.audioPlayer;
+                    if (audioPlayer.paused) {
+                        audioPlayer.play().then(() => {
+                            activeMarkerData.isPlaying = true;
+                            playButton.textContent = 'Pause';
+                        }).catch(err => {
+                            console.error('Audio playback failed:', err);
+                            alert('无法播放音频，请与页面进行交互后重试。');
+                        });
+                    } else {
+                        audioPlayer.pause();
+                        activeMarkerData.isPlaying = false;
+                        playButton.textContent = 'Play';
+                    }
+                } else {
+                    alert('没有检测到标记或音频尚未加载。');
+                }
+            });
         });
     </script>
 </head>
@@ -184,7 +220,7 @@
     <div id="debugInfo">Debug Info</div>
 
     <a-scene embedded arjs>
-        <a-marker id="marker1" preset="custom" url="pattern1.patt" emitevents="true" marker-debug>
+        <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
@@ -192,7 +228,7 @@
                 gltf-model="model1.gltf">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="pattern2.patt" emitevents="true" marker-debug>
+        <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
