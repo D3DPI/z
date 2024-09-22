@@ -182,7 +182,8 @@
     <button id="playButton" disabled>Play</button>
     <div id="infoText">Scan a marker to display information</div>
 
-    <a-scene embedded arjs>
+    <!-- 修改后的 a-scene 标签，隐藏 AR.js 调试信息和 VR 模式按钮 -->
+    <a-scene embedded arjs="debugUIEnabled: false" vr-mode-ui="enabled: false">
         <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
             <a-entity id="model1"
                 position="0 0 0"
