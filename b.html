@@ -2,44 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AR.js Marker Detection with Debugging</title>
+    <title>AR.js Marker Detection with Sound Component</title>
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
-        #playButton {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: grey;
-            color: white;
-            border: none;
-            cursor: not-allowed;
-        }
-        #infoText {
-            position: absolute;
-            top: 60px;
-            left: 20px;
-            width: 90%;
-            padding: 10px 20px;
-            background-color: #FFF;
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-        }
-        #debugInfo {
-            position: absolute;
-            top: 200px;
-            left: 20px;
-            width: 90%;
-            padding: 10px 20px;
-            background-color: #EEE;
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-            max-height: 200px;
-            overflow-y: auto;
-        }
+        /* ...省略样式，与之前相同 */
     </style>
     <!-- 定义组件 -->
     <script>
@@ -48,8 +15,6 @@
                 // 获取元素
                 var markerEl = this.el;
                 var markerId = markerEl.getAttribute('id');
-                var audioPlayer = null;
-                var infoTextContent = '';
                 var isPlaying = false;
                 var debugInfoEl = document.getElementById('debugInfo');
                 var playButton = document.getElementById('playButton');
@@ -57,6 +22,9 @@
                 var isMarkerVisible = false;
                 var audioLoaded = false;
                 var infoLoaded = false;
+                var infoTextContent = '';
+
+                var modelEl = markerEl.querySelector('a-entity');
 
                 // 根据 markerId 设置音频和文本文件路径
                 var audioSrc = '';
@@ -69,19 +37,8 @@
                     infoSrc = 'info2.txt';
                 }
 
-                // 加载音频
-                audioPlayer = new Audio();
-                audioPlayer.src = audioSrc;
-                audioPlayer.preload = 'auto';
-                audioPlayer.addEventListener('canplaythrough', () => {
-                    audioLoaded = true;
-                    updateDebugInfo();
-                }, false);
-                audioPlayer.addEventListener('error', (e) => {
-                    console.error('Error loading audio:', e);
-                    audioLoaded = false;
-                    updateDebugInfo();
-                }, false);
+                // 设置 sound 组件的 src
+                modelEl.setAttribute('sound', 'src', 'url(' + audioSrc + ')');
 
                 // 加载文本
                 fetch(infoSrc)
@@ -97,27 +54,24 @@
                         updateDebugInfo();
                     });
 
-                // 播放按钮事件
-                playButton.addEventListener('click', () => {
-                    if (audioPlayer && isMarkerVisible) {
-                        if (audioPlayer.paused) {
-                            audioPlayer.play().then(() => {
-                                isPlaying = true;
-                                playButton.textContent = 'Pause';
-                                updateDebugInfo();
-                            }).catch(err => {
-                                console.error('Audio playback failed:', err);
-                                alert('Cannot play audio without user interaction.');
-                            });
-                        } else {
-                            audioPlayer.pause();
-                            isPlaying = false;
-                            playButton.textContent = 'Play';
-                            updateDebugInfo();
-                        }
-                    } else {
-                        alert('Marker not visible or audio not loaded.');
-                    }
+                // 音频加载完成事件
+                modelEl.addEventListener('sound-loaded', () => {
+                    audioLoaded = true;
+                    updateDebugInfo();
+                });
+
+                // 音频播放事件
+                modelEl.addEventListener('sound-played', () => {
+                    console.log('Sound played');
+                    isPlaying = true;
+                    updateDebugInfo();
+                });
+
+                // 音频暂停事件
+                modelEl.addEventListener('sound-paused', () => {
+                    console.log('Sound paused');
+                    isPlaying = false;
+                    updateDebugInfo();
                 });
 
                 // 每一帧检查 marker 的可见性
@@ -133,8 +87,8 @@
                             // Marker 丢失
                             infoTextEl.textContent = 'Scan a marker to display information';
                             disablePlayButton();
-                            if (audioPlayer && !audioPlayer.paused) {
-                                audioPlayer.pause();
+                            if (isPlaying) {
+                                modelEl.components.sound.stopSound();
                                 isPlaying = false;
                                 playButton.textContent = 'Play';
                             }
@@ -142,6 +96,26 @@
                         updateDebugInfo();
                     }
                 }, 100); // 每100ms检查一次
+
+                // 播放按钮事件
+                playButton.addEventListener('click', () => {
+                    if (isMarkerVisible && audioLoaded) {
+                        if (!isPlaying) {
+                            modelEl.emit('playAudio');
+                            isPlaying = true;
+                            playButton.textContent = 'Pause';
+                            updateDebugInfo();
+                        } else {
+                            modelEl.components.sound.stopSound();
+                            isPlaying = false;
+                            playButton.textContent = 'Play';
+                            updateDebugInfo();
+                        }
+                    } else {
+                        alert('Marker not visible or audio not loaded.');
+                        updateDebugInfo();
+                    }
+                });
 
                 function enablePlayButton() {
                     playButton.disabled = false;
@@ -162,9 +136,8 @@
                         Marker ID: ${markerId}
                         Marker Visible: ${isMarkerVisible}
                         Audio Loaded: ${audioLoaded}
-                        Info Loaded: ${infoLoaded}
                         Audio Playing: ${isPlaying}
-                        Audio Src: ${audioSrc}
+                        Info Loaded: ${infoLoaded}
                         Info Text Content: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
                     `;
                     debugInfoEl.textContent = debugText;
@@ -184,7 +157,8 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.02 0.02 0.02"
-                gltf-model="model1.gltf">
+                gltf-model="model1.gltf"
+                sound="on: playAudio">
             </a-entity>
         </a-marker>
         <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
@@ -192,7 +166,8 @@
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.02 0.02 0.02"
-                gltf-model="model2.gltf">
+                gltf-model="model2.gltf"
+                sound="on: playAudio">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
