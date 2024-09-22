@@ -172,19 +172,8 @@
                             infoTextEl.textContent = infoTextContent || 'No information available';
                             enablePlayButton();
                         } else {
-                            // 标记丢失
-                            if (activeMarkerData && activeMarkerData.markerId === markerId) {
-                                // 当前活动的标记丢失，重置 activeMarkerData
-                                activeMarkerData = null;
-                                // 重置信息文本
-                                infoTextEl.textContent = 'Scan a marker to display information';
-                                disablePlayButton();
-                                if (audioPlayer && !audioPlayer.paused) {
-                                    audioPlayer.pause();
-                                    isPlaying = false;
-                                    playButton.textContent = 'Play';
-                                }
-                            }
+                            // 标记丢失，保持当前文本和音频状态不变
+                            // 不做任何处理，确保文本和音频播放稳定
                         }
                         updateDebugInfo();
                     }
