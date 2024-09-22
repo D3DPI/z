@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>v13</title>
+    <title>15</title>
+    <!-- 只加载aframe和aframe-ar，不加载three.min.js和GLTFLoader.js -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
-    <!-- 确保GLTFLoader脚本被正确引用 -->
-    <script src="three.min.js"></script>
-    <script src="GLTFLoader.js"></script>
     <style>
         #playButton {
             position: absolute;
@@ -135,42 +133,12 @@
                         .catch(err => {
                             console.error('Error fetching info2.txt:', err);
                             info2Text = '';
-                        }),
-                    new Promise((resolve) => {
-                        const audio1 = new Audio('audio1.mp3');
-                        audio1.addEventListener('canplaythrough', resolve, { once: true });
-                        audio1.addEventListener('error', () => {
-                            console.error('Error loading audio1.mp3');
-                            resolve();
-                        });
-                    }),
-                    new Promise((resolve) => {
-                        const audio2 = new Audio('audio2.mp3');
-                        audio2.addEventListener('canplaythrough', resolve, { once: true });
-                        audio2.addEventListener('error', () => {
-                            console.error('Error loading audio2.mp3');
-                            resolve();
-                        });
-                    }),
-                    new Promise((resolve) => {
-                        const loader = new THREE.GLTFLoader();
-                        loader.load('model1.gltf', resolve, null, (err) => {
-                            console.error('Error loading model1.gltf');
-                            resolve();
-                        });
-                    }),
-                    new Promise((resolve) => {
-                        const loader = new THREE.GLTFLoader();
-                        loader.load('model2.gltf', resolve, null, (err) => {
-                            console.error('Error loading model2.gltf');
-                            resolve();
-                        });
-                    })
+                        })
                 ]);
             };
 
             preloadResources().then(() => {
-                console.log('All resources preloaded');
+                console.log('Text resources preloaded');
                 enablePlayButton();
             }).catch(err => {
                 console.error('Error preloading resources', err);
