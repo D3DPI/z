@@ -3,32 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <title>AR.js Marker Detection with Sound Component</title>
+    <!-- 引入 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
-        /* ...省略样式，与之前相同 */
+        /* 调整样式，使移动设备上播放按钮和信息文本可见 */
+        #playButton {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: grey;
+            color: white;
+            border: none;
+            cursor: not-allowed;
+            z-index: 10; /* 确保按钮在顶层 */
+        }
+        #infoText {
+            position: absolute;
+            top: 70px; /* 调整位置，避免与按钮重叠 */
+            left: 20px;
+            width: calc(100% - 40px); /* 适应屏幕宽度 */
+            padding: 10px 20px;
+            background-color: #FFF;
+            color: #000;
+            border: none;
+            word-wrap: break-word;
+            z-index: 10;
+        }
+        #debugInfo {
+            position: absolute;
+            bottom: 20px; /* 将调试信息放在底部 */
+            left: 20px;
+            width: calc(100% - 40px);
+            padding: 10px 20px;
+            background-color: rgba(238, 238, 238, 0.8); /* 半透明背景 */
+            color: #000;
+            border: none;
+            word-wrap: break-word;
+            max-height: 150px; /* 限制高度 */
+            overflow-y: auto;
+            z-index: 10;
+        }
     </style>
     <!-- 定义组件 -->
     <script>
-        AFRAME.registerComponent('marker-debug', {
+        AFRAME.registerComponent('marker-handler', {
             init: function () {
-                // 获取元素
                 var markerEl = this.el;
                 var markerId = markerEl.getAttribute('id');
-                var isPlaying = false;
-                var debugInfoEl = document.getElementById('debugInfo');
+                var modelEl = markerEl.querySelector('a-entity');
                 var playButton = document.getElementById('playButton');
                 var infoTextEl = document.getElementById('infoText');
-                var isMarkerVisible = false;
+                var debugInfoEl = document.getElementById('debugInfo');
+
+                // 全局状态变量
+                var currentMarkerId = null;
+                var isPlaying = false;
                 var audioLoaded = false;
                 var infoLoaded = false;
                 var infoTextContent = '';
-
-                var modelEl = markerEl.querySelector('a-entity');
-
-                // 根据 markerId 设置音频和文本文件路径
                 var audioSrc = '';
                 var infoSrc = '';
+
+                // 根据 markerId 设置音频和文本文件路径
                 if (markerId === 'marker1') {
                     audioSrc = 'audio1.mp3';
                     infoSrc = 'info1.txt';
@@ -37,8 +75,8 @@
                     infoSrc = 'info2.txt';
                 }
 
-                // 设置 sound 组件的 src
-                modelEl.setAttribute('sound', 'src', 'url(' + audioSrc + ')');
+                // 初始化 sound 组件
+                modelEl.setAttribute('sound', 'src', 'url(' + audioSrc + '); on: playAudio');
 
                 // 加载文本
                 fetch(infoSrc)
@@ -64,77 +102,60 @@
                 modelEl.addEventListener('sound-played', () => {
                     console.log('Sound played');
                     isPlaying = true;
+                    playButton.textContent = 'Pause';
                     updateDebugInfo();
                 });
 
-                // 音频暂停事件
-                modelEl.addEventListener('sound-paused', () => {
-                    console.log('Sound paused');
+                // 音频停止事件
+                modelEl.addEventListener('sound-stopped', () => {
+                    console.log('Sound stopped');
                     isPlaying = false;
+                    playButton.textContent = 'Play';
                     updateDebugInfo();
                 });
-
-                // 每一帧检查 marker 的可见性
-                this.tick = AFRAME.utils.throttleTick(function () {
-                    var visible = markerEl.object3D.visible;
-                    if (visible !== isMarkerVisible) {
-                        isMarkerVisible = visible;
-                        if (isMarkerVisible) {
-                            // Marker 被检测到
-                            infoTextEl.textContent = infoTextContent || 'No information available';
-                            enablePlayButton();
-                        } else {
-                            // Marker 丢失
-                            infoTextEl.textContent = 'Scan a marker to display information';
-                            disablePlayButton();
-                            if (isPlaying) {
-                                modelEl.components.sound.stopSound();
-                                isPlaying = false;
-                                playButton.textContent = 'Play';
-                            }
-                        }
-                        updateDebugInfo();
-                    }
-                }, 100); // 每100ms检查一次
 
                 // 播放按钮事件
                 playButton.addEventListener('click', () => {
-                    if (isMarkerVisible && audioLoaded) {
+                    if (audioLoaded) {
                         if (!isPlaying) {
                             modelEl.emit('playAudio');
-                            isPlaying = true;
-                            playButton.textContent = 'Pause';
-                            updateDebugInfo();
                         } else {
                             modelEl.components.sound.stopSound();
-                            isPlaying = false;
-                            playButton.textContent = 'Play';
-                            updateDebugInfo();
                         }
                     } else {
-                        alert('Marker not visible or audio not loaded.');
-                        updateDebugInfo();
+                        alert('Audio not loaded yet.');
                     }
                 });
+
+                // 标记检测事件
+                var isMarkerVisible = false;
+
+                this.tick = AFRAME.utils.throttleTick(function () {
+                    var visible = markerEl.object3D.visible;
+                    if (visible && currentMarkerId !== markerId) {
+                        // 识别到新的标记
+                        currentMarkerId = markerId;
+                        infoTextEl.textContent = infoTextContent || 'No information available';
+                        enablePlayButton();
+                        updateDebugInfo();
+                    } else if (!visible && currentMarkerId === markerId) {
+                        // 当前标记暂时丢失，但不重置状态
+                        // 保持音频和文本不变
+                    }
+                }, 100); // 每100ms检查一次
 
                 function enablePlayButton() {
                     playButton.disabled = false;
                     playButton.style.backgroundColor = '#007BFF';
                     playButton.style.cursor = 'pointer';
-                    playButton.textContent = 'Play';
-                }
-
-                function disablePlayButton() {
-                    playButton.disabled = true;
-                    playButton.style.backgroundColor = 'grey';
-                    playButton.style.cursor = 'not-allowed';
-                    playButton.textContent = 'Play';
+                    playButton.textContent = isPlaying ? 'Pause' : 'Play';
                 }
 
                 function updateDebugInfo() {
                     var debugText = `
+                        Current Marker ID: ${currentMarkerId}
                         Marker ID: ${markerId}
-                        Marker Visible: ${isMarkerVisible}
+                        Marker Visible: ${markerEl.object3D.visible}
                         Audio Loaded: ${audioLoaded}
                         Audio Playing: ${isPlaying}
                         Info Loaded: ${infoLoaded}
@@ -152,22 +173,20 @@
     <div id="debugInfo">Debug Info</div>
 
     <a-scene embedded arjs>
-        <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
+        <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-handler>
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.02 0.02 0.02"
-                gltf-model="model1.gltf"
-                sound="on: playAudio">
+                gltf-model="model1.gltf">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
+        <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-handler>
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.02 0.02 0.02"
-                gltf-model="model2.gltf"
-                sound="on: playAudio">
+                gltf-model="model2.gltf">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
