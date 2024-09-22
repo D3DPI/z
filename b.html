@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AR.js Marker Detection</title>
+    <title>岭南乐器增强现实视听工具</title>
     <!-- 使用本地的 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
@@ -44,8 +44,7 @@
             document.addEventListener('DOMContentLoaded', function () {
                 document.body.innerHTML = `
                     <div style="text-align:center;padding:20px;">
-                        <p>为了获得更好的体验，请点击右上角菜单，选择“在浏览器中打开”。</p>
-                        <p><img src="open_in_browser.png" alt="在浏览器中打开" style="width:80%;max-width:300px;"></p>
+                        <p>为了获得更好的体验，请点击右上角菜单，选择“在默认浏览器中打开”。</p>
                     </div>
                 `;
             });
@@ -78,7 +77,7 @@
                             if (audioPlayer.paused) {
                                 audioPlayer.play().then(() => {
                                     activeMarkerData.isPlaying = true;
-                                    playButton.textContent = 'Pause';
+                                    playButton.textContent = '暂停';
                                 }).catch(err => {
                                     console.error('Audio playback failed:', err);
                                     alert('无法播放音频，请与页面进行交互后重试。');
@@ -86,7 +85,7 @@
                             } else {
                                 audioPlayer.pause();
                                 activeMarkerData.isPlaying = false;
-                                playButton.textContent = 'Play';
+                                playButton.textContent = '播放';
                             }
                         } else {
                             alert('音频尚未加载完毕，请稍后再试。');
@@ -185,7 +184,7 @@
                         playButton.disabled = false;
                         playButton.style.backgroundColor = '#007BFF';
                         playButton.style.cursor = 'pointer';
-                        playButton.textContent = isPlaying ? 'Pause' : 'Play';
+                        playButton.textContent = isPlaying ? '暂停' : '播放';
                     }
 
                     function disablePlayButton() {
@@ -200,8 +199,8 @@
     </script>
 </head>
 <body style="margin: 0; overflow: hidden;">
-    <button id="playButton" disabled>Play</button>
-    <div id="infoText">Scan a marker to display information</div>
+    <button id="playButton" disabled>播放</button>
+    <div id="infoText">请用摄像头对准岭南乐器码</div>
 
     <!-- 修改后的 a-scene 标签，隐藏 AR.js 调试信息和 VR 模式按钮 -->
     <!-- 添加 sourceType: webcam; videoTexture: true; 以提高兼容性 -->
