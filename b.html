@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>岭南乐器增强现实视听工具</title>
-    <!-- 使用本地的 A-Frame 和 AR.js 库 -->
+    <!-- 引入 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
     <style>
@@ -96,22 +96,26 @@
                 });
             });
 
-            // 注册自定义组件，用于设置模型的旋转
-            AFRAME.registerComponent('set-object-rotation', {
+            // 自定义组件，用于在模型加载后设置模型的旋转
+            AFRAME.registerComponent('set-model-rotation', {
                 schema: {
-                    x: {type: 'number', default: 0},
-                    y: {type: 'number', default: 0},
-                    z: {type: 'number', default: 0}
+                    x: { type: 'number', default: 0 },
+                    y: { type: 'number', default: 0 },
+                    z: { type: 'number', default: 0 }
                 },
                 init: function () {
                     var el = this.el;
                     var data = this.data;
-                    // 将角度从度数转换为弧度
-                    el.object3D.rotation.set(
-                        THREE.Math.degToRad(data.x),
-                        THREE.Math.degToRad(data.y),
-                        THREE.Math.degToRad(data.z)
-                    );
+
+                    el.addEventListener('model-loaded', function(e) {
+                        var model = el.getObject3D('mesh');
+                        if (!model) return;
+                        model.rotation.set(
+                            THREE.Math.degToRad(data.x),
+                            THREE.Math.degToRad(data.y),
+                            THREE.Math.degToRad(data.z)
+                        );
+                    });
                 }
             });
 
@@ -229,7 +233,7 @@
                 position="0 0 0"
                 scale="0.02 0.02 0.02"
                 gltf-model="model1.gltf"
-                set-object-rotation="x: 0; y: 0; z: 0">
+                set-model-rotation="x:0; y:0; z:0">
             </a-entity>
         </a-marker>
         <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
@@ -237,7 +241,7 @@
                 position="0 0 0"
                 scale="0.02 0.02 0.02"
                 gltf-model="model2.gltf"
-                set-object-rotation="x: 0; y: 0; z: 90">
+                set-model-rotation="x:0; y:0; z:90">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
