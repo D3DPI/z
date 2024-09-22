@@ -58,34 +58,6 @@
     <div id="infoText">Scan a marker to display information</div>
 
     <script>
-        // Function to select the desired camera
-        async function getCameraConstraints() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            const mainCamera = videoDevices.find(device => device.label.toLowerCase().includes('back')) || videoDevices[0];
-            
-            return {
-                video: {
-                    deviceId: mainCamera.deviceId
-                }
-            };
-        }
-
-        // Override AR.js default camera constraints
-        ARjs.Context.prototype._initSource = async function(onReady) {
-            const constraints = await getCameraConstraints();
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then((stream) => {
-                    const video = document.createElement('video');
-                    video.srcObject = stream;
-                    video.play();
-                    onReady(video);
-                })
-                .catch((err) => {
-                    console.error("Error accessing camera: ", err);
-                });
-        };
-
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM fully loaded and parsed');
 
@@ -199,7 +171,7 @@
                 currentMarker = marker;
                 currentAudioPlayer = audioPlayer;
                 infoText.textContent = infoTextContent;
-                // 移除自动播放，改为通过按钮控制
+                // 不自动播放音频，遵循浏览器自动播放策略
             };
 
             const markerLost = (marker, audioPlayer) => {
