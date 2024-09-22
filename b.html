@@ -46,17 +46,24 @@
     </style>
     <!-- 定义组件 -->
     <script>
-        AFRAME.registerComponent('marker-handler', {
+        AFRAME.registerComponent('marker-debug', {
             init: function () {
                 // 获取元素
-                const markerEl = this.el;
-                const markerId = markerEl.getAttribute('id');
-                const playButton = document.getElementById('playButton');
-                const infoTextEl = document.getElementById('infoText');
-                const debugInfoEl = document.getElementById('debugInfo');
+                var markerEl = this.el;
+                var markerId = markerEl.getAttribute('id');
+                var audioPlayer = null;
+                var infoTextContent = '';
+                var isPlaying = false;
+                var debugInfoEl = document.getElementById('debugInfo');
+                var playButton = document.getElementById('playButton');
+                var infoTextEl = document.getElementById('infoText');
+                var isMarkerVisible = false;
+                var audioLoaded = false;
+                var infoLoaded = false;
 
-                let audioSrc = '';
-                let infoSrc = '';
+                // 根据 markerId 设置音频和文本文件路径
+                var audioSrc = '';
+                var infoSrc = '';
                 if (markerId === 'marker1') {
                     audioSrc = 'audio1.mp3';
                     infoSrc = 'info1.txt';
@@ -65,37 +72,33 @@
                     infoSrc = 'info2.txt';
                 }
 
-                let audioPlayer = new Audio(audioSrc);
+                // 加载音频
+                audioPlayer = new Audio();
+                audioPlayer.src = audioSrc;
                 audioPlayer.preload = 'auto';
-                let audioLoaded = false;
-                let isPlaying = false;
-                let infoTextContent = '';
-                let infoLoaded = false;
-                let isMarkerVisible = false;
-
                 audioPlayer.addEventListener('canplaythrough', () => {
                     audioLoaded = true;
                     updateDebugInfo();
-                });
-
+                }, false);
                 audioPlayer.addEventListener('error', (e) => {
                     console.error('Error loading audio:', e);
                     audioLoaded = false;
                     updateDebugInfo();
-                });
+                }, false);
 
+                // 音频播放和暂停事件
                 audioPlayer.addEventListener('play', () => {
                     isPlaying = true;
                     playButton.textContent = 'Pause';
                     updateDebugInfo();
                 });
-
                 audioPlayer.addEventListener('pause', () => {
                     isPlaying = false;
                     playButton.textContent = 'Play';
                     updateDebugInfo();
                 });
 
+                // 加载文本
                 fetch(infoSrc)
                     .then(response => response.ok ? response.text() : '')
                     .then(data => {
@@ -109,6 +112,7 @@
                         updateDebugInfo();
                     });
 
+                // 播放按钮事件
                 playButton.addEventListener('click', () => {
                     if (audioLoaded && isMarkerVisible) {
                         if (!isPlaying) {
@@ -124,6 +128,7 @@
                     }
                 });
 
+                // 监听 markerFound 和 markerLost 事件
                 markerEl.addEventListener('markerFound', () => {
                     isMarkerVisible = true;
                     infoTextEl.textContent = infoTextContent || 'No information available';
@@ -137,6 +142,7 @@
                     if (audioPlayer && !audioPlayer.paused) {
                         audioPlayer.pause();
                     }
+                    infoTextEl.textContent = 'Scan a marker to display information';
                     updateDebugInfo();
                 });
 
@@ -154,17 +160,19 @@
                 }
 
                 function updateDebugInfo() {
-                    const debugText = `
+                    var debugText = `
                         Marker ID: ${markerId}
                         Marker Visible: ${isMarkerVisible}
                         Audio Loaded: ${audioLoaded}
-                        Audio Playing: ${isPlaying}
                         Info Loaded: ${infoLoaded}
-                        Info Text: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
+                        Audio Playing: ${isPlaying}
+                        Audio Src: ${audioSrc}
+                        Info Text Content: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
                     `;
                     debugInfoEl.textContent = debugText;
                 }
 
+                // 初始化时禁用播放按钮
                 disablePlayButton();
             }
         });
@@ -176,7 +184,7 @@
     <div id="debugInfo">Debug Info</div>
 
     <a-scene embedded arjs>
-        <a-marker id="marker1" preset="custom" url="pattern1.patt" emitevents="true" marker-handler>
+        <a-marker id="marker1" preset="custom" url="pattern1.patt" emitevents="true" marker-debug>
             <a-entity id="model1"
                 position="0 0 0"
                 rotation="0 0 0"
@@ -184,7 +192,7 @@
                 gltf-model="model1.gltf">
             </a-entity>
         </a-marker>
-        <a-marker id="marker2" preset="custom" url="pattern2.patt" emitevents="true" marker-handler>
+        <a-marker id="marker2" preset="custom" url="pattern2.patt" emitevents="true" marker-debug>
             <a-entity id="model2"
                 position="0 0 0"
                 rotation="0 0 0"
