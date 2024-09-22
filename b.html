@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AR.js Marker Detection with Debugging</title>
+    <title>AR.js Marker Detection</title>
     <!-- 使用本地的 A-Frame 和 AR.js 库 -->
     <script src="aframe.min.js"></script>
     <script src="aframe-ar.js"></script>
@@ -28,20 +28,6 @@
             color: #000;
             border: none;
             word-wrap: break-word;
-            z-index: 10;
-        }
-        #debugInfo {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: calc(100% - 40px);
-            padding: 10px 20px;
-            background-color: rgba(238, 238, 238, 0.8);
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-            max-height: 150px;
-            overflow-y: auto;
             z-index: 10;
         }
     </style>
@@ -98,7 +84,6 @@
                 var audioPlayer = null;
                 var infoTextContent = '';
                 var isPlaying = false;
-                var debugInfoEl = document.getElementById('debugInfo');
                 var playButton = document.getElementById('playButton');
                 var infoTextEl = document.getElementById('infoText');
                 var isMarkerVisible = false;
@@ -134,12 +119,10 @@
                     .then(data => {
                         infoTextContent = data;
                         infoLoaded = true;
-                        updateDebugInfo();
                     })
                     .catch(err => {
                         console.error('Error loading info text:', err);
                         infoLoaded = false;
-                        updateDebugInfo();
                     });
 
                 // 每一帧检查 marker 的可见性
@@ -175,7 +158,6 @@
                             // 标记丢失，保持当前文本和音频状态不变
                             // 不做任何处理，确保文本和音频播放稳定
                         }
-                        updateDebugInfo();
                     }
                 }, 100); // 每100ms检查一次
 
@@ -192,20 +174,6 @@
                     playButton.style.cursor = 'not-allowed';
                     playButton.textContent = 'Play';
                 }
-
-                function updateDebugInfo() {
-                    var debugText = `
-                        Marker ID: ${markerId}
-                        Marker Visible: ${isMarkerVisible}
-                        Audio Loaded (by readyState): ${audioPlayer.readyState >= 2}
-                        Info Loaded: ${infoLoaded}
-                        Audio Playing: ${isPlaying}
-                        Audio Src: ${audioSrc}
-                        Info Text Content: ${infoTextContent ? infoTextContent.substring(0, 100) + '...' : 'No content'}
-                        Active Marker ID: ${activeMarkerData ? activeMarkerData.markerId : 'None'}
-                    `;
-                    debugInfoEl.textContent = debugText;
-                }
             }
         });
     </script>
@@ -213,7 +181,6 @@
 <body style="margin: 0; overflow: hidden;">
     <button id="playButton" disabled>Play</button>
     <div id="infoText">Scan a marker to display information</div>
-    <div id="debugInfo">Debug Info</div>
 
     <a-scene embedded arjs>
         <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
