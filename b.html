@@ -96,6 +96,25 @@
                 });
             });
 
+            // 注册自定义组件，用于设置模型的旋转
+            AFRAME.registerComponent('set-object-rotation', {
+                schema: {
+                    x: {type: 'number', default: 0},
+                    y: {type: 'number', default: 0},
+                    z: {type: 'number', default: 0}
+                },
+                init: function () {
+                    var el = this.el;
+                    var data = this.data;
+                    // 将角度从度数转换为弧度
+                    el.object3D.rotation.set(
+                        THREE.Math.degToRad(data.x),
+                        THREE.Math.degToRad(data.y),
+                        THREE.Math.degToRad(data.z)
+                    );
+                }
+            });
+
             AFRAME.registerComponent('marker-debug', {
                 init: function () {
                     var markerEl = this.el;
@@ -208,17 +227,17 @@
         <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-debug>
             <a-entity id="model1"
                 position="0 0 0"
-                rotation="0 0 0"
                 scale="0.02 0.02 0.02"
-                gltf-model="model1.gltf">
+                gltf-model="model1.gltf"
+                set-object-rotation="x: 0; y: 0; z: 0">
             </a-entity>
         </a-marker>
         <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-debug>
             <a-entity id="model2"
                 position="0 0 0"
-                rotation="0 0 90"
                 scale="0.02 0.02 0.02"
-                gltf-model="model2.gltf">
+                gltf-model="model2.gltf"
+                set-object-rotation="x: 0; y: 0; z: 90">
             </a-entity>
         </a-marker>
         <a-entity camera></a-entity>
