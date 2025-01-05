@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   岭南乐器增强现实视听工具
+  </title>
+  <script src="aframe.min.js">
+  </script>
+  <script src="aframe-ar.js">
+  </script>
+  <style>
+   #a1 {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: grey;
+            color: white;
+            border: none;
+            cursor: not-allowed;
+            z-index: 10;
+        }
+        #b2 {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            width: calc(100% - 40px);
+            padding: 10px 20px;
+            background-color: #FFF;
+            color: #000;
+            border: none;
+            word-wrap: break-word;
+            z-index: 10;
+        }
+  </style>
+  <script>
+   function c3() {
+            return /MicroMessenger/i.test(navigator.userAgent);
+        }
+        var d4 = c3();
+        if (d4) {
+            document.addEventListener('DOMContentLoaded', function () {
+                document.body.innerHTML = 
+                    '<div style="text-align:center;padding:20px;">' +
+                    '<p>为了获得更好的体验，请点击右上角菜单，选择“在默认浏览器中打开”。</p>' +
+                    '</div>';
+            });
+        } else {
+            var e5 = null;
+            var f6 = {};
+            document.addEventListener('DOMContentLoaded', function () {
+                var g7 = ['audio1.mp3', 'audio2.mp3'];
+                g7.forEach(function (h8) {
+                    var i9 = new Audio();
+                    i9.src = h8;
+                    i9.preload = 'auto';
+                    i9.load();
+                    f6[h8] = { j10: i9 };
+                });
+                var k11 = document.getElementById('a1');
+                k11.addEventListener('click', function () {
+                    if (e5 && e5.j10) {
+                        var l12 = e5.j10;
+                        if (l12.readyState >= 2) {
+                            if (l12.paused) {
+                                l12.play().then(function () {
+                                    e5.m13 = true;
+                                    k11.textContent = '暂停';
+                                }).catch(function (n14) {
+                                    console.error('Audio playback failed:', n14);
+                                    alert('无法播放音频，请与页面进行交互后重试。');
+                                });
+                            } else {
+                                l12.pause();
+                                e5.m13 = false;
+                                k11.textContent = '播放';
+                            }
+                        } else {
+                            alert('音频尚未加载完毕，请稍后再试。');
+                        }
+                    } else {
+                        alert('没有检测到标记或音频尚未加载。');
+                    }
+                });
+            });
+
+            AFRAME.registerComponent('o15', {
+                schema: {
+                    x: { type: 'number', default: 0 },
+                    y: { type: 'number', default: 0 },
+                    z: { type: 'number', default: 0 }
+                },
+                init: function () {
+                    var p16 = this.el;
+                    var q17 = this.data;
+                    p16.addEventListener('model-loaded', function () {
+                        var r18 = p16.getObject3D('mesh');
+                        if (!r18) return;
+                        r18.rotation.set(
+                            THREE.Math.degToRad(q17.x),
+                            THREE.Math.degToRad(q17.y),
+                            THREE.Math.degToRad(q17.z)
+                        );
+                    });
+                }
+            });
+
+            AFRAME.registerComponent('s19', {
+                init: function () {
+                    var t20 = this.el;
+                    var u21 = t20.getAttribute('id');
+                    var v22 = null;
+                    var w23 = '';
+                    var x24 = false;
+                    var y25 = document.getElementById('a1');
+                    var z26 = document.getElementById('b2');
+                    var a27 = false;
+                    var b28 = false;
+                    var c29 = '';
+                    var d30 = '';
+                    if (u21 === 'marker1') {
+                        c29 = 'audio1.mp3';
+                        d30 = 'info1.txt';
+                    } else if (u21 === 'marker2') {
+                        c29 = 'audio2.mp3';
+                        d30 = 'info2.txt';
+                    }
+                    var e31 = f6[c29];
+                    if (e31 && e31.j10) {
+                        v22 = e31.j10;
+                    } else {
+                        console.error('Audio player not found for ' + c29);
+                        v22 = new Audio();
+                        v22.src = c29;
+                        v22.preload = 'auto';
+                        v22.load();
+                    }
+                    fetch(d30)
+                        .then(function (f32) {
+                            return f32.ok ? f32.text() : '';
+                        })
+                        .then(function (g33) {
+                            w23 = g33;
+                            b28 = true;
+                        })
+                        .catch(function (h34) {
+                            console.error('Error loading info text:', h34);
+                            b28 = false;
+                        });
+                    this.tick = AFRAME.utils.throttleTick(function () {
+                        var i35 = t20.object3D.visible;
+                        if (i35 !== a27) {
+                            a27 = i35;
+                            b28 = v22.readyState >= 2;
+                            if (a27) {
+                                if (e5 && e5.u21 !== u21) {
+                                    if (e5.j10 && !e5.j10.paused) {
+                                        e5.j10.pause();
+                                        e5.m13 = false;
+                                    }
+                                }
+                                e5 = {
+                                    u21: u21,
+                                    j10: v22,
+                                    w23: w23,
+                                    m13: x24,
+                                    b28: b28,
+                                    b28: b28
+                                };
+                                z26.textContent = w23 || 'No information available';
+                                f36();
+                            }
+                        }
+                    }, 100);
+                    function f36() {
+                        y25.disabled = false;
+                        y25.style.backgroundColor = '#007BFF';
+                        y25.style.cursor = 'pointer';
+                        y25.textContent = x24 ? '暂停' : '播放';
+                    }
+                }
+            });
+        }
+  </script>
+ </head>
+ <body style="margin: 0; overflow: hidden;">
+  <button disabled="" id="a1">
+   播放
+  </button>
+  <div id="b2">
+   请用摄像头对准“岭南乐器码”
+  </div>
+  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+   <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
+    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker2" preset="custom" s19="" url="pattern2.patt">
+    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.013 0.013 0.013">
+    </a-entity>
+   </a-marker>
+   <a-entity camera="">
+   </a-entity>
+  </a-scene>
+  <script>
+   // Add dynamic playback rate adjustment
+    document.addEventListener('DOMContentLoaded', function () {
+        var playbackRate = 1.0;
+        var audioElements = document.querySelectorAll('audio');
+        
+        audioElements.forEach(function (audio) {
+            // Add speed controls
+            var speedUpBtn = document.createElement('button');
+            speedUpBtn.textContent = '加速播放';
+            speedUpBtn.onclick = function () {
+                playbackRate = Math.min(2.0, playbackRate + 0.1);
+                audio.playbackRate = playbackRate;
+                console.log(`播放速度已调整为: ${playbackRate}`);
+            };
+            document.body.appendChild(speedUpBtn);
+            
+            var slowDownBtn = document.createElement('button');
+            slowDownBtn.textContent = '减速播放';
+            slowDownBtn.onclick = function () {
+                playbackRate = Math.max(0.5, playbackRate - 0.1);
+                audio.playbackRate = playbackRate;
+                console.log(`播放速度已调整为: ${playbackRate}`);
+            };
+            document.body.appendChild(slowDownBtn);
+        });
+    });
+
+    // Add detailed error handling for audio playback
+    function handleAudioError(event) {
+        console.error("音频播放错误:", event);
+        alert("音频播放失败，请检查设备支持或文件是否存在。");
+    }
+    var audioElements = document.querySelectorAll('audio');
+    audioElements.forEach(function (audio) {
+        audio.addEventListener('error', handleAudioError);
+    });
+
+    // Add real-time debug information panel
+    var debugPanel = document.createElement('div');
+    debugPanel.style.position = 'fixed';
+    debugPanel.style.bottom = '10px';
+    debugPanel.style.right = '10px';
+    debugPanel.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    debugPanel.style.color = 'white';
+    debugPanel.style.padding = '10px';
+    debugPanel.style.borderRadius = '5px';
+    debugPanel.innerHTML = '<p>实时调试信息:</p><pre id="debug-info"></pre>';
+    document.body.appendChild(debugPanel);
+
+    setInterval(function () {
+        var debugInfo = document.getElementById('debug-info');
+        debugInfo.textContent = `播放速率: ${playbackRate}`;
+    }, 1000);
+  </script>
+  <script>
+   // Initialize dynamic theme switching
+    document.addEventListener('DOMContentLoaded', function () {
+        var themes = ['dark', 'light', 'colorful'];
+        var currentThemeIndex = 0;
+
+        var themeToggleBtn = document.createElement('button');
+        themeToggleBtn.textContent = '切换主题';
+        themeToggleBtn.style.position = 'absolute';
+        themeToggleBtn.style.top = '150px';
+        themeToggleBtn.style.left = '20px';
+        themeToggleBtn.onclick = function () {
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            document.body.className = themes[currentThemeIndex];
+            console.log(`主题已切换至: ${themes[currentThemeIndex]}`);
+        };
+        document.body.appendChild(themeToggleBtn);
+    });
+
+    // Advanced error logging
+    function logErrorToServer(error) {
+        // Simulate sending error details to a server
+        console.error("记录错误信息:", error);
+    }
+
+    window.onerror = function (message, source, lineno, colno, error) {
+        logErrorToServer({
+            message: message,
+            source: source,
+            lineno: lineno,
+            colno: colno,
+            error: error
+        });
+    };
+
+    // Add real-time light control in AFRAME
+    AFRAME.registerComponent('dynamic-light', {
+        schema: {
+            intensity: { type: 'number', default: 1 }
+        },
+        init: function () {
+            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
+            light.intensity = this.data.intensity;
+        },
+        update: function () {
+            var light = this.el.getObject3D('light');
+            light.intensity = this.data.intensity;
+        }
+    });
+
+    // Real-time interaction for model material
+    AFRAME.registerComponent('interactive-material', {
+        init: function () {
+            var el = this.el;
+            var materialIndex = 0;
+            var materials = ['#FF0000', '#00FF00', '#0000FF'];
+            el.addEventListener('click', function () {
+                materialIndex = (materialIndex + 1) % materials.length;
+                el.setAttribute('material', 'color', materials[materialIndex]);
+                console.log(`材质已切换至: ${materials[materialIndex]}`);
+            });
+        }
+    });
+
+    // Extended debug information
+    setInterval(function () {
+        console.log("运行状态：", {
+            theme: document.body.className,
+            timestamp: new Date().toISOString()
+        });
+    }, 5000);
+  </script>
+ </body>
+</html>
