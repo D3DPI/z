@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>岭南乐器增强现实视听工具</title>
-    <script src="aframe.min.js"></script>
-    <script src="aframe-ar.js"></script>
-    <style>
-        #a1 {
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   岭南乐器增强现实视听工具
+  </title>
+  <script src="aframe.min.js">
+  </script>
+  <script src="aframe-ar.js">
+  </script>
+  <style>
+   #a1 {
             position: absolute;
             top: 20px;
             left: 20px;
@@ -29,9 +33,9 @@
             word-wrap: break-word;
             z-index: 10;
         }
-    </style>
-    <script>
-        function c3() {
+  </style>
+  <script>
+   function c3() {
             return /MicroMessenger/i.test(navigator.userAgent);
         }
         var d4 = c3();
@@ -178,29 +182,153 @@
                 }
             });
         }
-    </script>
-</head>
-<body style="margin: 0; overflow: hidden;">
-    <button id="a1" disabled>播放</button>
-    <div id="b2">请用摄像头对准“岭南乐器码”</div>
-    <a-scene embedded arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" vr-mode-ui="enabled: false">
-        <a-marker id="marker1" preset="custom" url="pattern1.patt" s19>
-            <a-entity id="model1"
-                position="0 0 0"
-                scale="0.02 0.02 0.02"
-                gltf-model="model1.gltf"
-                o15="x:0; y:0; z:0">
-            </a-entity>
-        </a-marker>
-        <a-marker id="marker2" preset="custom" url="pattern2.patt" s19>
-            <a-entity id="model2"
-                position="0 0 0"
-                scale="0.013 0.013 0.013"
-                gltf-model="model2.gltf"
-                o15="x:0; y:0; z:0">
-            </a-entity>
-        </a-marker>
-        <a-entity camera></a-entity>
-    </a-scene>
-</body>
+  </script>
+ </head>
+ <body style="margin: 0; overflow: hidden;">
+  <button disabled="" id="a1">
+   播放
+  </button>
+  <div id="b2">
+   请用摄像头对准“岭南乐器码”
+  </div>
+  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+   <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
+    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker2" preset="custom" s19="" url="pattern2.patt">
+    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.013 0.013 0.013">
+    </a-entity>
+   </a-marker>
+   <a-entity camera="">
+   </a-entity>
+  </a-scene>
+  <script>
+   // Add dynamic playback rate adjustment
+    document.addEventListener('DOMContentLoaded', function () {
+        var playbackRate = 1.0;
+        var audioElements = document.querySelectorAll('audio');
+        
+        audioElements.forEach(function (audio) {
+            // Add speed controls
+            var speedUpBtn = document.createElement('button');
+            speedUpBtn.textContent = '加速播放';
+            speedUpBtn.onclick = function () {
+                playbackRate = Math.min(2.0, playbackRate + 0.1);
+                audio.playbackRate = playbackRate;
+                console.log(`播放速度已调整为: ${playbackRate}`);
+            };
+            document.body.appendChild(speedUpBtn);
+            
+            var slowDownBtn = document.createElement('button');
+            slowDownBtn.textContent = '减速播放';
+            slowDownBtn.onclick = function () {
+                playbackRate = Math.max(0.5, playbackRate - 0.1);
+                audio.playbackRate = playbackRate;
+                console.log(`播放速度已调整为: ${playbackRate}`);
+            };
+            document.body.appendChild(slowDownBtn);
+        });
+    });
+
+    // Add detailed error handling for audio playback
+    function handleAudioError(event) {
+        console.error("音频播放错误:", event);
+        alert("音频播放失败，请检查设备支持或文件是否存在。");
+    }
+    var audioElements = document.querySelectorAll('audio');
+    audioElements.forEach(function (audio) {
+        audio.addEventListener('error', handleAudioError);
+    });
+
+    // Add real-time debug information panel
+    var debugPanel = document.createElement('div');
+    debugPanel.style.position = 'fixed';
+    debugPanel.style.bottom = '10px';
+    debugPanel.style.right = '10px';
+    debugPanel.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    debugPanel.style.color = 'white';
+    debugPanel.style.padding = '10px';
+    debugPanel.style.borderRadius = '5px';
+    debugPanel.innerHTML = '<p>实时调试信息:</p><pre id="debug-info"></pre>';
+    document.body.appendChild(debugPanel);
+
+    setInterval(function () {
+        var debugInfo = document.getElementById('debug-info');
+        debugInfo.textContent = `播放速率: ${playbackRate}`;
+    }, 1000);
+  </script>
+  <script>
+   // Initialize dynamic theme switching
+    document.addEventListener('DOMContentLoaded', function () {
+        var themes = ['dark', 'light', 'colorful'];
+        var currentThemeIndex = 0;
+
+        var themeToggleBtn = document.createElement('button');
+        themeToggleBtn.textContent = '切换主题';
+        themeToggleBtn.style.position = 'absolute';
+        themeToggleBtn.style.top = '150px';
+        themeToggleBtn.style.left = '20px';
+        themeToggleBtn.onclick = function () {
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            document.body.className = themes[currentThemeIndex];
+            console.log(`主题已切换至: ${themes[currentThemeIndex]}`);
+        };
+        document.body.appendChild(themeToggleBtn);
+    });
+
+    // Advanced error logging
+    function logErrorToServer(error) {
+        // Simulate sending error details to a server
+        console.error("记录错误信息:", error);
+    }
+
+    window.onerror = function (message, source, lineno, colno, error) {
+        logErrorToServer({
+            message: message,
+            source: source,
+            lineno: lineno,
+            colno: colno,
+            error: error
+        });
+    };
+
+    // Add real-time light control in AFRAME
+    AFRAME.registerComponent('dynamic-light', {
+        schema: {
+            intensity: { type: 'number', default: 1 }
+        },
+        init: function () {
+            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
+            light.intensity = this.data.intensity;
+        },
+        update: function () {
+            var light = this.el.getObject3D('light');
+            light.intensity = this.data.intensity;
+        }
+    });
+
+    // Real-time interaction for model material
+    AFRAME.registerComponent('interactive-material', {
+        init: function () {
+            var el = this.el;
+            var materialIndex = 0;
+            var materials = ['#FF0000', '#00FF00', '#0000FF'];
+            el.addEventListener('click', function () {
+                materialIndex = (materialIndex + 1) % materials.length;
+                el.setAttribute('material', 'color', materials[materialIndex]);
+                console.log(`材质已切换至: ${materials[materialIndex]}`);
+            });
+        }
+    });
+
+    // Extended debug information
+    setInterval(function () {
+        console.log("运行状态：", {
+            theme: document.body.className,
+            timestamp: new Date().toISOString()
+        });
+    }, 5000);
+  </script>
+ </body>
 </html>
