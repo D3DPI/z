@@ -330,5 +330,92 @@
         });
     }, 5000);
   </script>
+  <script>
+   // Background audio playback enhancements
+    document.addEventListener('DOMContentLoaded', function () {
+        var audioElements = document.querySelectorAll('audio');
+        var playbackRate = 1.0;
+
+        audioElements.forEach(function (audio) {
+            // Add speed control logic
+            audio.addEventListener('ratechange', function () {
+                console.log(`Playback rate adjusted to: ${audio.playbackRate}`);
+            });
+
+            audio.addEventListener('play', function () {
+                console.log('Audio started playing');
+            });
+
+            audio.addEventListener('pause', function () {
+                console.log('Audio paused');
+            });
+
+            // Automatically adjust playback rate based on file duration
+            if (audio.duration > 60) {
+                playbackRate = 1.5;
+                audio.playbackRate = playbackRate;
+                console.log(`Long audio detected. Adjusted playback rate to: ${playbackRate}`);
+            }
+        });
+    });
+
+    // Enhanced error handling (background logging only)
+    window.onerror = function (message, source, lineno, colno, error) {
+        console.error("Error captured:", {
+            message: message,
+            source: source,
+            lineno: lineno,
+            colno: colno,
+            error: error
+        });
+    };
+
+    // Model material adjustments (invisible to users)
+    AFRAME.registerComponent('dynamic-model', {
+        init: function () {
+            var el = this.el;
+            var colorIndex = 0;
+            var colors = ['#FF5733', '#33FF57', '#3357FF'];
+            setInterval(function () {
+                colorIndex = (colorIndex + 1) % colors.length;
+                el.setAttribute('material', 'color', colors[colorIndex]);
+                console.log(`Model color changed to: ${colors[colorIndex]}`);
+            }, 10000); // Change color every 10 seconds
+        }
+    });
+
+    // Light intensity adjustments (background functionality)
+    AFRAME.registerComponent('dynamic-light', {
+        schema: {
+            intensity: { type: 'number', default: 1 }
+        },
+        init: function () {
+            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
+            light.intensity = this.data.intensity;
+        },
+        update: function () {
+            var light = this.el.getObject3D('light');
+            light.intensity = this.data.intensity;
+        }
+    });
+
+    // Real-time visibility monitoring for AR markers
+    AFRAME.registerComponent('visibility-tracker', {
+        init: function () {
+            var el = this.el;
+            var isVisible = false;
+
+            this.el.addEventListener('markerFound', function () {
+                isVisible = true;
+                console.log(`Marker found: ${el.id}`);
+            });
+
+            this.el.addEventListener('markerLost', function () {
+                isVisible = false;
+                console.log(`Marker lost: ${el.id}`);
+            });
+        }
+    });
+  </script>
  </body>
 </html>
