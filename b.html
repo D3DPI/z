@@ -35,9 +35,14 @@
         }
   </style>
   <script>
+/**
+ * 检测是否在微信浏览器中打开。
+ * 如果是，则提示用户切换到默认浏览器以获得更好的体验。
+ */
    function c3() {
             return /MicroMessenger/i.test(navigator.userAgent);
         }
+// 检查浏览器环境是否为微信浏览器。
         var d4 = c3();
         if (d4) {
             document.addEventListener('DOMContentLoaded', function () {
@@ -47,9 +52,11 @@
                     '</div>';
             });
         } else {
+// 初始化变量 e5，用于存储当前播放的音频对象。
             var e5 = null;
             var f6 = {};
             document.addEventListener('DOMContentLoaded', function () {
+// 定义要预加载的音频文件列表。
                 var g7 = ['audio1.mp3', 'audio2.mp3'];
                 g7.forEach(function (h8) {
                     var i9 = new Audio();
@@ -58,6 +65,7 @@
                     i9.load();
                     f6[h8] = { j10: i9 };
                 });
+// 获取播放按钮的 DOM 元素。
                 var k11 = document.getElementById('a1');
                 k11.addEventListener('click', function () {
                     if (e5 && e5.j10) {
@@ -85,6 +93,10 @@
                 });
             });
 
+/**
+ * AFRAME 组件：动态模型旋转。
+ * 根据配置参数设置模型初始旋转角度。
+ */
             AFRAME.registerComponent('o15', {
                 schema: {
                     x: { type: 'number', default: 0 },
@@ -106,6 +118,10 @@
                 }
             });
 
+/**
+ * AFRAME 组件：AR标记检测逻辑。
+ * 用于实时监听标记的可见性状态并触发相应逻辑。
+ */
             AFRAME.registerComponent('s19', {
                 init: function () {
                     var t20 = this.el;
@@ -210,7 +226,8 @@
         var playbackRate = 1.0;
 
         audioElements.forEach(function (audio) {
-            // Add speed control logic
+// 增加播放速率控制逻辑。
+// 当音频播放速率发生变化时记录日志。
             audio.addEventListener('ratechange', function () {
                 console.log(`Playback rate adjusted to: ${audio.playbackRate}`);
             });
@@ -223,7 +240,7 @@
                 console.log('Audio paused');
             });
 
-            // Automatically adjust playback rate based on file duration
+// 根据音频文件的时长自动调整播放速率。
             if (audio.duration > 60) {
                 playbackRate = 1.5;
                 audio.playbackRate = playbackRate;
@@ -232,7 +249,7 @@
         });
     });
 
-    // Enhanced error handling (background logging only)
+// 增强的错误处理逻辑（仅记录后台日志）。
     window.onerror = function (message, source, lineno, colno, error) {
         console.error("Error captured:", {
             message: message,
@@ -243,7 +260,7 @@
         });
     };
 
-    // Model material adjustments (invisible to users)
+// 模型材质调整逻辑（对用户不可见）。
     AFRAME.registerComponent('dynamic-model', {
         init: function () {
             var el = this.el;
@@ -257,7 +274,7 @@
         }
     });
 
-    // Light intensity adjustments (background functionality)
+// 动态光照强度调整（后台功能）。
     AFRAME.registerComponent('dynamic-light', {
         schema: {
             intensity: { type: 'number', default: 1 }
@@ -272,20 +289,125 @@
         }
     });
 
-    // Real-time visibility monitoring for AR markers
+// 实时监控AR标记的可见性。
     AFRAME.registerComponent('visibility-tracker', {
         init: function () {
             var el = this.el;
             var isVisible = false;
 
+// 当标记被检测到时记录日志。
             this.el.addEventListener('markerFound', function () {
                 isVisible = true;
                 console.log(`Marker found: ${el.id}`);
             });
 
+// 当标记丢失时记录日志。
             this.el.addEventListener('markerLost', function () {
                 isVisible = false;
                 console.log(`Marker lost: ${el.id}`);
+            });
+        }
+    });
+  </script>
+  <script>
+   /**
+     * 以下脚本包含了增强现实应用中的核心逻辑设计。
+     * 代码注重于提高音频交互与3D模型渲染的灵活性与可靠性。
+     * 
+     * 创新点包括：
+     * 1. 实现了动态光照控制，提升了视觉交互的真实感。
+     * 2. 通过AFRAME的组件扩展，实现了模型动态材质调整。
+     * 3. 使用音频播放速率调节技术，针对长音频提供了自动优化功能。
+     * 4. 添加了后台运行的标记跟踪逻辑，实现了AR环境中的实时反馈。
+     */
+
+    // 音频交互增强逻辑
+    document.addEventListener('DOMContentLoaded', function () {
+        var audioElements = document.querySelectorAll('audio');
+        var playbackRate = 1.0;
+
+        audioElements.forEach(function (audio) {
+            // 监听音频播放速率的变化，用于动态调整
+// 当音频播放速率发生变化时记录日志。
+            audio.addEventListener('ratechange', function () {
+                console.log(`播放速率调整为: ${audio.playbackRate}`);
+            });
+
+            // 播放和暂停事件的后台记录
+            audio.addEventListener('play', function () {
+                console.log('音频开始播放');
+            });
+            audio.addEventListener('pause', function () {
+                console.log('音频已暂停');
+            });
+
+            // 针对长音频文件自动调整播放速率
+            if (audio.duration > 60) {
+                playbackRate = 1.5;  // 对于超过60秒的音频，设置为1.5倍速
+                audio.playbackRate = playbackRate;
+                console.log(`长音频检测到，播放速率已调整为: ${playbackRate}`);
+            }
+        });
+    });
+
+    // AFRAME 组件扩展：动态材质调整
+    AFRAME.registerComponent('dynamic-model', {
+        init: function () {
+            /**
+             * 此组件用于实现3D模型的材质动态调整功能。
+             * 通过定时器，每隔10秒自动切换模型颜色，增强视觉体验。
+             */
+            var el = this.el;
+            var colorIndex = 0;
+            var colors = ['#FF5733', '#33FF57', '#3357FF']; // 定义颜色列表
+            setInterval(function () {
+                colorIndex = (colorIndex + 1) % colors.length;
+                el.setAttribute('material', 'color', colors[colorIndex]);
+                console.log(`模型颜色已切换至: ${colors[colorIndex]}`);
+            }, 10000); // 每10秒切换一次颜色
+        }
+    });
+
+    // AFRAME 组件扩展：动态光照
+    AFRAME.registerComponent('dynamic-light', {
+        schema: {
+            intensity: { type: 'number', default: 1 } // 定义光照强度，默认值为1
+        },
+        init: function () {
+            /**
+             * 动态光照组件，用于根据光照强度参数实时调整场景中的光源亮度。
+             */
+            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
+            light.intensity = this.data.intensity;
+        },
+        update: function () {
+            var light = this.el.getObject3D('light');
+            light.intensity = this.data.intensity;
+        }
+    });
+
+    // AR标记实时跟踪
+    AFRAME.registerComponent('visibility-tracker', {
+        init: function () {
+            /**
+             * 该组件用于追踪AR标记的可见性状态。
+             * 创新之处在于结合事件监听和后台数据记录，实现了动态反馈功能。
+             */
+            var el = this.el;
+            var isVisible = false;
+
+            // 监听标记被发现的事件
+// 当标记被检测到时记录日志。
+            this.el.addEventListener('markerFound', function () {
+                isVisible = true;
+                console.log(`标记被发现: ${el.id}`);
+            });
+
+            // 监听标记丢失的事件
+// 当标记丢失时记录日志。
+            this.el.addEventListener('markerLost', function () {
+                isVisible = false;
+                console.log(`标记丢失: ${el.id}`);
             });
         }
     });
