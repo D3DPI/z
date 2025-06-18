@@ -3,8 +3,6 @@
 <head>
   <meta charset="utf-8"/>
   <title>岭南乐器增强现实视听工具</title>
-
-  <!-- 微信 X5 全屏 & iOS Inline-Play -->
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="x5-page-mode" content="app">
   <meta name="x5-orientation" content="portrait">
@@ -16,19 +14,26 @@
   <script src="aframe-ar.js"></script>
 
   <style>
-    html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,Roboto;}
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:-apple-system,Roboto; }
+    /* ① 让场景全屏可见 */
+    a-scene {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
     /* 播放按钮 & 信息栏 */
     #playBtn {
-      position:absolute; top:18px; left:18px; z-index:10; cursor:not-allowed;
-      background:#888; border:0; border-radius:6px; padding:.6rem 1.2rem;
-      color:#fff; opacity:.85;
+      position: absolute; top: 18px; left: 18px; z-index: 10;
+      background: #888; border: 0; border-radius: 6px;
+      padding: .6rem 1.2rem; color: #fff; opacity: .85;
+      cursor: not-allowed;
     }
     #infoBox {
-      position:absolute; top:70px; left:18px; right:18px; z-index:10;
-      background:#fff; border-radius:6px; padding:.8rem;
-      font-size:.9rem; line-height:1.4;
+      position: absolute; top: 70px; left: 18px; right: 18px; z-index: 10;
+      background: #fff; border-radius: 6px;
+      padding: .8rem; font-size: .9rem; line-height: 1.4;
     }
-    /* AR.js Debug UI 默认在右下角，这里可随意微调 */
+    /* Debug UI 在右下 */
     .arjs-debug-ui {
       bottom: 12px !important;
       right: 12px !important;
@@ -37,103 +42,120 @@
 </head>
 
 <body>
-  <!-- 1. 播放按钮 & 信息栏 -->
+  <!-- 播放按钮 & 文本提示 -->
   <button id="playBtn" disabled>播放</button>
   <div id="infoBox">请用摄像头对准“岭南乐器码”</div>
 
-  <!-- 2. A-Frame 场景：开启 Debug UI -->
-  <a-scene embedded vr-mode-ui="enabled:false"
+  <!-- 全屏场景：取消 embedded，并开启 debug UI -->
+  <a-scene id="scene"
+           vr-mode-ui="enabled:false"
            arjs="sourceType: webcam;
                  videoTexture: true;
                  debugUIEnabled: true;
                  debugUIContainerClass: arjs-debug-ui;">
     <!-- Marker 1 -->
     <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-handler>
-      <a-entity gltf-model="model1.gltf" scale="0.02 0.02 0.02"
-                set-rotation="x:0; y:0; z:0"></a-entity>
+      <a-entity gltf-model="model1.gltf"
+                scale="0.02 0.02 0.02"
+                set-rotation="x:0; y:0; z:0">
+      </a-entity>
     </a-marker>
     <!-- Marker 2 -->
     <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-handler>
-      <a-entity gltf-model="model2.gltf" scale="0.013 0.013 0.013"
-                set-rotation="x:0; y:0; z:0"></a-entity>
+      <a-entity gltf-model="model2.gltf"
+                scale="0.013 0.013 0.013"
+                set-rotation="x:0; y:0; z:0">
+      </a-entity>
     </a-marker>
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
-  /* 模型初始旋转组件 */
-  AFRAME.registerComponent('set-rotation',{
-    schema:{ x:{type:'number',default:0}, y:{type:'number',default:0}, z:{type:'number',default:0} },
-    init(){
-      this.el.addEventListener('model-loaded', ()=>{
-        const mesh = this.el.getObject3D('mesh');
-        if(mesh){
-          mesh.rotation.set(
-            THREE.Math.degToRad(this.data.x),
-            THREE.Math.degToRad(this.data.y),
-            THREE.Math.degToRad(this.data.z)
-          );
+    /* 模型初始旋转组件 */
+    AFRAME.registerComponent('set-rotation', {
+      schema:{ x:{type:'number',default:0}, y:{type:'number',default:0}, z:{type:'number',default:0} },
+      init(){
+        this.el.addEventListener('model-loaded', () => {
+          const mesh = this.el.getObject3D('mesh');
+          if(mesh){
+            mesh.rotation.set(
+              THREE.Math.degToRad(this.data.x),
+              THREE.Math.degToRad(this.data.y),
+              THREE.Math.degToRad(this.data.z)
+            );
+          }
+        });
+      }
+    });
+
+    /* Marker 识别 + 音频播放 + 信息更新 */
+    const audioMap = {
+      marker1: { src:'audio1.mp3', info:'info1.txt' },
+      marker2: { src:'audio2.mp3', info:'info2.txt' }
+    };
+    const cache = {};
+    const playBtn = document.getElementById('playBtn');
+    let ctx = null;
+
+    AFRAME.registerComponent('marker-handler', {
+      init(){
+        const id = this.el.getAttribute('id');
+        const cfg = audioMap[id] || {};
+        if(cfg.src && !cache[cfg.src]){
+          const a = new Audio(cfg.src);
+          a.preload = 'auto';
+          cache[cfg.src] = a;
         }
-      });
-    }
-  });
-
-  /* Marker 检测 + 音频播放 + 信息更新 */
-  const audioMap={
-    marker1:{src:'audio1.mp3',info:'info1.txt'},
-    marker2:{src:'audio2.mp3',info:'info2.txt'}
-  };
-  const cache={}, playBtn=document.getElementById('playBtn');
-  let ctx=null;
-
-  AFRAME.registerComponent('marker-handler',{
-    init(){
-      const id=this.el.getAttribute('id'),
-            cfg=audioMap[id]||{};
-      if(cfg.src&&!cache[cfg.src]){
-        const a=new Audio(cfg.src);
-        a.preload='auto'; cache[cfg.src]=a;
+        let infoText = '';
+        if(cfg.info){
+          fetch(cfg.info)
+            .then(r=>r.ok?r.text():'')
+            .then(t=>infoText = t)
+            .catch(()=>{});
+        }
+        let vis = false;
+        this.tick = AFRAME.utils.throttleTick(() => {
+          const now = this.el.object3D.visible;
+          if(now !== vis){
+            vis = now;
+            if(now){
+              if(ctx && ctx.audio && !ctx.audio.paused){
+                ctx.audio.pause();
+              }
+              ctx = { audio: cache[cfg.src] || new Audio(cfg.src) };
+              document.getElementById('infoBox').textContent = infoText || '加载中…';
+              updatePlayBtn();
+            }
+          }
+        }, 100);
       }
-      let infoTxt='';
-      if(cfg.info){
-        fetch(cfg.info)
-          .then(r=>r.ok?r.text():'')
-          .then(t=>infoTxt=t)
-          .catch(()=>{});
+    });
+
+    playBtn.addEventListener('click', () => {
+      if(!ctx || !ctx.audio) return;
+      if(ctx.audio.paused){
+        ctx.audio.play().then(updatePlayBtn);
+      } else {
+        ctx.audio.pause();
+        updatePlayBtn();
       }
-      let vis=false;
-      this.tick=AFRAME.utils.throttleTick(()=>{
-        const now=this.el.object3D.visible;
-        if(now!==vis){ vis=now; if(now){
-          if(ctx&&ctx.audio&&!ctx.audio.paused) ctx.audio.pause();
-          ctx={audio:cache[cfg.src]||new Audio(cfg.src)};
-          document.getElementById('infoBox').textContent=infoTxt||'加载中…';
-          updateBtn();
-        }}},100);
-    }
-  });
+    });
 
-  playBtn.addEventListener('click',()=>{
-    if(!ctx||!ctx.audio)return;
-    if(ctx.audio.paused) ctx.audio.play().then(updateBtn);
-    else { ctx.audio.pause(); updateBtn(); }
-  });
-  function updateBtn(){
-    if(!ctx){
-      playBtn.disabled=true; playBtn.style.cursor='not-allowed'; 
-      playBtn.textContent='播放'; return;
+    function updatePlayBtn(){
+      if(!ctx){
+        playBtn.disabled = true;
+        playBtn.style.cursor = 'not-allowed';
+        playBtn.textContent = '播放';
+        return;
+      }
+      playBtn.disabled = false;
+      playBtn.style.cursor = 'pointer';
+      playBtn.textContent = ctx.audio.paused ? '播放' : '暂停';
     }
-    playBtn.disabled=false; playBtn.style.cursor='pointer';
-    playBtn.textContent=ctx.audio.paused?'播放':'暂停';
-  }
 
-  /* 调试：监听 Debug UI 的 “Start” 按钮 */
-  window.addEventListener('arjs-video-source-onReady',()=>{
-    console.log('📹 video source ready, AR.js 已启动摄像头');
-  });
-  window.addEventListener('arjs-render-started',()=>{
-    console.log('🕶️ AR.js 渲染已开始');
-  });
+    /* 可选：调试输出 */
+    window.addEventListener('arjs-video-source-onReady', () => console.log('📹 摄像头已就绪'));
+    window.addEventListener('arjs-render-started', () => console.log('🕶️ AR.js 渲染已开始'));
   </script>
 </body>
 </html>
