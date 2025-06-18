@@ -4,54 +4,43 @@
   <meta charset="utf-8"/>
   <title>岭南乐器增强现实视听工具</title>
 
-  <!-- 微信内核 & 全屏适配 -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="x5-page-mode" content="app">
   <meta name="x5-orientation" content="portrait">
   <meta name="full-screen" content="yes">
 
-  <!-- A-Frame & AR.js（本地或 CDN 均可）-->
   <script src="aframe.min.js"></script>
   <script src="aframe-ar.js"></script>
 
   <style>
     html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,Roboto;}
-    /* 进入 AR 启动页 */
-    #enter-ar{position:fixed;inset:0;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;background:#000;color:#fff;
-      z-index:1000;transition:opacity .6s;}
-    #enter-ar button{padding:.8rem 1.6rem;font-size:1rem;border:0;border-radius:8px;
-      background:#1aad19;color:#fff;}
-    /* 播放按钮 & 信息栏 */
-    #playBtn{position:absolute;top:18px;left:18px;z-index:10;cursor:not-allowed;
-      background:#888;border:0;border-radius:6px;padding:.6rem 1.2rem;color:#fff;opacity:.85}
-    #infoBox{position:absolute;top:70px;left:18px;right:18px;z-index:10;
-      background:#fff;border-radius:6px;padding:.8rem;font-size:.9rem;line-height:1.4;}
+    #enter-ar{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      background:#000;color:#fff;z-index:1000;transition:opacity .6s;}
+    #enter-ar button{padding:.8rem 1.6rem;font-size:1rem;border:0;border-radius:8px;background:#1aad19;color:#fff;}
+    #playBtn{position:absolute;top:18px;left:18px;z-index:10;cursor:not-allowed;background:#888;border:0;
+      border-radius:6px;padding:.6rem 1.2rem;color:#fff;opacity:.85}
+    #infoBox{position:absolute;top:70px;left:18px;right:18px;z-index:10;background:#fff;border-radius:6px;
+      padding:.8rem;font-size:.9rem;line-height:1.4;}
   </style>
 </head>
 
 <body>
-  <!-- 启动页 -->
   <div id="enter-ar">
     <p style="margin-bottom:1.2rem;font-size:1.1rem;">点击授权摄像头并进入 AR 体验</p>
     <button id="enterBtn">进入 AR</button>
   </div>
 
-  <!-- 控件 -->
   <button id="playBtn" disabled>播放</button>
   <div id="infoBox">请用摄像头对准“岭南乐器码”</div>
 
-  <!-- A-Frame 场景 -->
   <a-scene embedded vr-mode-ui="enabled: false"
            arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false">
-    <!-- Marker 1 -->
     <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-handler>
       <a-entity id="model1" gltf-model="model1.gltf"
                 position="0 0 0" scale="0.02 0.02 0.02"
                 set-rotation="x:0; y:0; z:0"></a-entity>
     </a-marker>
 
-    <!-- Marker 2 -->
     <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-handler>
       <a-entity id="model2" gltf-model="model2.gltf"
                 position="0 0 0" scale="0.013 0.013 0.013"
@@ -62,78 +51,67 @@
   </a-scene>
 
   <script>
-/* ---------------- 1. 进入 AR 的权限申请 ---------------- */
+/* ---------- 1. 进入 AR 的权限申请（去掉二次 getUserMedia） ---------- */
 document.getElementById('enterBtn').addEventListener('click', async () => {
-  try {
-    // iOS 需手动申请 Motion 权限
-    if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-      await DeviceMotionEvent.requestPermission().catch(()=>{});
-    }
-    // Camera 权限
-    await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
-  } catch(e){
-    alert('无法获取摄像头权限，AR 体验已终止'); return;
+  // iOS 需申请 Motion
+  if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+    await DeviceMotionEvent.requestPermission().catch(()=>{});
   }
-  // 启动 AR.js
+
+  // 直接启动 AR.js（内部会自行拉取摄像头）
   const scene = document.querySelector('a-scene');
-  if (scene.hasLoaded) { scene.systems.arjs.start(); }
-  else { scene.addEventListener('loaded', ()=>scene.systems.arjs.start(), {once:true}); }
-  // 隐藏启动页
+  if (scene.hasLoaded) scene.systems.arjs.start();
+  else scene.addEventListener('loaded', ()=>scene.systems.arjs.start(), {once:true});
+
+  // 隐藏封面
   const cover = document.getElementById('enter-ar');
   cover.style.opacity = 0; setTimeout(()=>cover.remove(), 600);
 });
 
-/* ---------------- 2. 组件：模型初始旋转 ---------------- */
+/* ---------- 2. 模型初始旋转 ---------- */
 AFRAME.registerComponent('set-rotation', {
   schema:{x:{type:'number',default:0},y:{type:'number',default:0},z:{type:'number',default:0}},
   init(){
     this.el.addEventListener('model-loaded',()=>{
-      const m = this.el.getObject3D('mesh'); if(!m) return;
-      m.rotation.set(
-        THREE.Math.degToRad(this.data.x),
-        THREE.Math.degToRad(this.data.y),
-        THREE.Math.degToRad(this.data.z)
-      );
+      const m = this.el.getObject3D('mesh');
+      if(m){
+        m.rotation.set(
+          THREE.Math.degToRad(this.data.x),
+          THREE.Math.degToRad(this.data.y),
+          THREE.Math.degToRad(this.data.z)
+        );
+      }
     });
   }
 });
 
-/* ---------------- 3. 音频/信息逻辑与 Marker 处理 ---------------- */
+/* ---------- 3. 音频 / 信息面板 / Marker 逻辑 ---------- */
 const audioMap = {
   marker1:{src:'audio1.mp3', info:'info1.txt'},
   marker2:{src:'audio2.mp3', info:'info2.txt'}
 };
-const cachedAudio = {};   // src -> <audio>
-let currentCtx = null;    // {id,audio,playing}
+const cachedAudio = {};
+let currentCtx = null;
 
 AFRAME.registerComponent('marker-handler',{
   init(){
-    const markerId = this.el.getAttribute('id');
-    const cfg = audioMap[markerId]||{};
-    /* 预加载音频 */
+    const id = this.el.getAttribute('id');
+    const cfg = audioMap[id]||{};
     if(cfg.src && !cachedAudio[cfg.src]){
-      const a=new Audio(cfg.src); a.preload='auto'; cachedAudio[cfg.src]=a;
+      const a = new Audio(cfg.src); a.preload='auto'; cachedAudio[cfg.src]=a;
     }
-    /* 预取文字 */
-    let infoTxt = '';
+    let infoTxt='';
     if(cfg.info){
       fetch(cfg.info).then(r=>r.ok?r.text():'').then(t=>infoTxt=t).catch(()=>{});
     }
-    /* 监听可见性 */
     let wasVisible = false;
     this.tick = AFRAME.utils.throttleTick(()=>{
       const visible = this.el.object3D.visible;
       if(visible!==wasVisible){
         wasVisible = visible;
         if(visible){
-          // 若有其他音频在播，暂停它
-          if(currentCtx && currentCtx.audio && !currentCtx.audio.paused){
-            currentCtx.audio.pause();
-          }
-          currentCtx = {
-            id: markerId,
-            audio: cachedAudio[cfg.src] || new Audio(cfg.src),
-          };
+          if(currentCtx && currentCtx.audio && !currentCtx.audio.paused){currentCtx.audio.pause();}
+          currentCtx = {audio: cachedAudio[cfg.src] || new Audio(cfg.src)};
           document.getElementById('infoBox').textContent = infoTxt || '加载中…';
           updatePlayBtn();
         }
@@ -142,16 +120,13 @@ AFRAME.registerComponent('marker-handler',{
   }
 });
 
-/* 播放按钮 */
+/* ---------- 4. 播放按钮 ---------- */
 const btn = document.getElementById('playBtn');
 btn.addEventListener('click',()=>{
   if(!currentCtx || !currentCtx.audio) return;
   const au = currentCtx.audio;
-  if(au.paused){
-    au.play().then(updatePlayBtn).catch(()=>alert('音频播放失败，请重试'));
-  }else{
-    au.pause(); updatePlayBtn();
-  }
+  if(au.paused){au.play().then(updatePlayBtn).catch(()=>alert('音频播放失败，请重试')); }
+  else {au.pause(); updatePlayBtn();}
 });
 function updatePlayBtn(){
   if(!currentCtx){btn.disabled=true;btn.style.cursor='not-allowed';btn.textContent='播放';return;}
