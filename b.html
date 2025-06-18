@@ -15,8 +15,8 @@
   <script src="aframe-ar.js"></script>
 
   <style>
-    html,body { margin:0; height:100%; overflow:hidden; font-family:-apple-system,Roboto; }
-    /* 全屏覆层 + 按钮 */
+    html, body { margin:0; height:100%; overflow:hidden; font-family:-apple-system,Roboto; }
+    /* 启动覆层 + 按钮 */
     #cover {
       position:fixed; inset:0;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -26,7 +26,7 @@
       padding:.9rem 1.8rem; font-size:1rem; border:0; border-radius:9px;
       background:#1aad19; color:#fff; -webkit-tap-highlight-color:transparent;
     }
-    /* 控件 */
+    /* 播放按钮 & 信息栏 */
     #playBtn {
       position:absolute; top:18px; left:18px; z-index:10; cursor:not-allowed;
       background:#888; border:0; border-radius:6px; padding:.6rem 1.2rem;
@@ -37,28 +37,22 @@
       background:#fff; border-radius:6px; padding:.8rem;
       font-size:.9rem; line-height:1.4;
     }
-    /* 隐藏视频元素 */
-    #webcamVideo { display:none; }
   </style>
 </head>
-
 <body>
-  <!-- 1. 覆层：提示 & 捕获手势 -->
+  <!-- 1. 启动覆层 -->
   <div id="cover">
-    <p style="margin-bottom:1.4rem; font-size:1.12rem;">点击授权摄像头并进入 AR 体验</p>
+    <p style="margin-bottom:1.4rem;font-size:1.12rem;">点击授权摄像头并进入 AR 体验</p>
     <button id="startBtn">进入 AR</button>
   </div>
 
-  <!-- 2. 隐藏的摄像头视频流 -->
-  <video id="webcamVideo" autoplay playsinline muted></video>
-
-  <!-- 3. 播放按钮 & 文本提示 -->
+  <!-- 2. 播放按钮 & 信息栏 -->
   <button id="playBtn" disabled>播放</button>
   <div id="infoBox">请用摄像头对准“岭南乐器码”</div>
 
-  <!-- 4. A-Frame 场景，使用 video 源 -->
+  <!-- 3. A-Frame 场景：使用 webcam 源 -->
   <a-scene id="scene" embedded vr-mode-ui="enabled:false"
-           arjs="sourceType: video; sourceUrl: #webcamVideo; debugUIEnabled:false">
+           arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false">
     <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-handler>
       <a-entity gltf-model="model1.gltf" scale="0.02 0.02 0.02"
                 set-rotation="x:0; y:0; z:0"></a-entity>
@@ -71,46 +65,32 @@
   </a-scene>
 
 <script>
-/*=== 1. 按钮触发：手势内申请摄像头 & Motion 权限，然后启动 AR.js ===*/
+/* 1. 等待用户手势再启动 AR.js（内部会 getUserMedia） */
 const cover = document.getElementById('cover');
 const startBtn = document.getElementById('startBtn');
 
-['pointerdown','touchstart','click'].forEach(evt => {
-  startBtn.addEventListener(evt, startAR, { once:true, passive:true });
-});
+['pointerdown','touchstart','click'].forEach(ev =>
+  startBtn.addEventListener(ev, startAR, { once: true, passive: true })
+);
 
-async function startAR() {
-  // iOS 陀螺仪权限
+function startAR(){
+  // iOS 需要先申请 DeviceMotion 权限（可忽略拒绝）
   if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-    try { await DeviceMotionEvent.requestPermission(); } catch(e){}
+    DeviceMotionEvent.requestPermission().catch(()=>{});
   }
-  // 手势内获取摄像头流
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } }
-    });
-  } catch(e) {
-    alert('无法获取摄像头权限，AR 体验已终止');
-    return;
-  }
-  // 将流赋给隐藏 video
-  const video = document.getElementById('webcamVideo');
-  video.srcObject = stream;
-  video.play();  // 有时需要显式 play
 
-  // 隐藏覆层
-  cover.style.opacity = 0;
-  setTimeout(() => cover.remove(), 600);
-
-  // 启动 AR.js
+  // 调用 AR.js 启动摄像头流
   const scene = document.getElementById('scene');
   const launch = () => scene.systems.arjs.start();
   if (scene.hasLoaded) launch();
-  else scene.addEventListener('loaded', launch, { once:true });
+  else scene.addEventListener('loaded', launch, { once: true });
+
+  // 隐藏启动覆层
+  cover.style.opacity = 0;
+  setTimeout(()=>cover.remove(), 600);
 }
 
-/*=== 2. 模型初始旋转 组件 ===*/
+/* 2. 模型初始旋转组件 */
 AFRAME.registerComponent('set-rotation',{
   schema:{ x:{type:'number',default:0}, y:{type:'number',default:0}, z:{type:'number',default:0} },
   init(){
@@ -126,10 +106,10 @@ AFRAME.registerComponent('set-rotation',{
   }
 });
 
-/*=== 3. 音频/信息/Marker 逻辑 ===*/
+/* 3. Marker 检测 + 音频播放 + 信息更新 */
 const audioMap = {
-  marker1: { src:'audio1.mp3', info:'info1.txt' },
-  marker2: { src:'audio2.mp3', info:'info2.txt' }
+  marker1: { src: 'audio1.mp3', info: 'info1.txt' },
+  marker2: { src: 'audio2.mp3', info: 'info2.txt' }
 };
 const cache = {};
 const playBtn = document.getElementById('playBtn');
@@ -138,24 +118,25 @@ let ctx = null;
 AFRAME.registerComponent('marker-handler',{
   init(){
     const id = this.el.getAttribute('id');
-    const cfg = audioMap[id]||{};
+    const cfg = audioMap[id] || {};
     if (cfg.src && !cache[cfg.src]) {
-      cache[cfg.src] = new Audio(cfg.src);
-      cache[cfg.src].preload = 'auto';
+      const a = new Audio(cfg.src);
+      a.preload = 'auto';
+      cache[cfg.src] = a;
     }
     let infoText = '';
     if (cfg.info) {
       fetch(cfg.info)
-        .then(r=>r.ok ? r.text() : '')
-        .then(t=>infoText=t)
+        .then(r => r.ok ? r.text() : '')
+        .then(t => infoText = t)
         .catch(()=>{});
     }
-    let visible = false;
+    let vis = false;
     this.tick = AFRAME.utils.throttleTick(()=>{
       const now = this.el.object3D.visible;
-      if (now !== visible) {
-        visible = now;
-        if (visible) {
+      if (now !== vis) {
+        vis = now;
+        if (now) {
           if (ctx && ctx.audio && !ctx.audio.paused) ctx.audio.pause();
           const audio = cache[cfg.src] || new Audio(cfg.src);
           ctx = { audio };
@@ -180,8 +161,8 @@ playBtn.addEventListener('click', ()=>{
 function updatePlayBtn(){
   if (!ctx) {
     playBtn.disabled = true;
-    playBtn.textContent = '播放';
     playBtn.style.cursor = 'not-allowed';
+    playBtn.textContent = '播放';
     return;
   }
   playBtn.disabled = false;
