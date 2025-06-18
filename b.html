@@ -4,34 +4,19 @@
   <meta charset="utf-8"/>
   <title>岭南乐器增强现实视听工具</title>
 
-  <!-- 微信 X5 全屏 & 适配 -->
+  <!-- 微信 X5 全屏 & iOS Inline-Play -->
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="x5-page-mode" content="app">
   <meta name="x5-orientation" content="portrait">
   <meta name="full-screen" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
 
   <!-- A-Frame & AR.js -->
   <script src="aframe.min.js"></script>
   <script src="aframe-ar.js"></script>
 
   <style>
-    html, body { margin:0; height:100%; overflow:hidden; font-family:-apple-system,Roboto; }
-    /* 启动覆层 */
-    #cover {
-      position:fixed; inset:0;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:#000; color:#fff; z-index:1000; transition:opacity .6s;
-      /* 同时捕获全屏点击/触摸 */
-      cursor:pointer;
-    }
-    #cover p { margin-bottom:1.4rem; font-size:1.12rem; }
-    /* 用 <a> 代替 button，更保证点击事件被识别 */
-    #startLink {
-      display:inline-block; text-decoration:none;
-      padding:.9rem 1.8rem; font-size:1rem; border-radius:9px;
-      background:#1aad19; color:#fff;
-      -webkit-tap-highlight-color:transparent;
-    }
+    html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,Roboto;}
     /* 播放按钮 & 信息栏 */
     #playBtn {
       position:absolute; top:18px; left:18px; z-index:10; cursor:not-allowed;
@@ -43,34 +28,31 @@
       background:#fff; border-radius:6px; padding:.8rem;
       font-size:.9rem; line-height:1.4;
     }
+    /* AR.js Debug UI 默认在右下角，这里可随意微调 */
+    .arjs-debug-ui {
+      bottom: 12px !important;
+      right: 12px !important;
+    }
   </style>
 </head>
+
 <body>
-
-  <!-- 1. 启动覆层：全屏捕获触摸/点击 -->
-  <div id="cover"
-       onclick="startAR()"
-       ontouchstart="startAR()">
-    <p>点击授权摄像头并进入 AR 体验</p>
-    <a id="startLink"
-       href="javascript:;"
-       onclick="startAR()"
-       ontouchstart="startAR()">
-      进入 AR
-    </a>
-  </div>
-
-  <!-- 2. 播放按钮 & 信息栏 -->
+  <!-- 1. 播放按钮 & 信息栏 -->
   <button id="playBtn" disabled>播放</button>
   <div id="infoBox">请用摄像头对准“岭南乐器码”</div>
 
-  <!-- 3. A-Frame 场景 -->
-  <a-scene id="scene" embedded vr-mode-ui="enabled:false"
-           arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false">
+  <!-- 2. A-Frame 场景：开启 Debug UI -->
+  <a-scene embedded vr-mode-ui="enabled:false"
+           arjs="sourceType: webcam;
+                 videoTexture: true;
+                 debugUIEnabled: true;
+                 debugUIContainerClass: arjs-debug-ui;">
+    <!-- Marker 1 -->
     <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-handler>
       <a-entity gltf-model="model1.gltf" scale="0.02 0.02 0.02"
                 set-rotation="x:0; y:0; z:0"></a-entity>
     </a-marker>
+    <!-- Marker 2 -->
     <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-handler>
       <a-entity gltf-model="model2.gltf" scale="0.013 0.013 0.013"
                 set-rotation="x:0; y:0; z:0"></a-entity>
@@ -78,30 +60,8 @@
     <a-entity camera></a-entity>
   </a-scene>
 
-<script>
-  let inited = false;
-  function startAR(){
-    if(inited) return;
-    inited = true;
-
-    // iOS 运动权限申请（若支持且拒绝也继续）
-    if(typeof DeviceMotionEvent?.requestPermission==='function'){
-      DeviceMotionEvent.requestPermission().catch(()=>{});
-    }
-
-    // 启动 AR.js（在用户手势内触发 getUserMedia）
-    const scene = document.getElementById('scene');
-    const launch = ()=> scene.systems.arjs.start();
-    if(scene.hasLoaded) launch();
-    else scene.addEventListener('loaded', launch, { once:true });
-
-    // 覆层淡出
-    const cover = document.getElementById('cover');
-    cover.style.opacity = 0;
-    setTimeout(()=> cover.remove(), 600);
-  }
-
-  /* 组件：设置模型初始旋转 */
+  <script>
+  /* 模型初始旋转组件 */
   AFRAME.registerComponent('set-rotation',{
     schema:{ x:{type:'number',default:0}, y:{type:'number',default:0}, z:{type:'number',default:0} },
     init(){
@@ -118,66 +78,62 @@
     }
   });
 
-  /* Marker 识别 + 音频播放 + 信息更新 */
-  const audioMap = {
-    marker1: { src:'audio1.mp3', info:'info1.txt' },
-    marker2: { src:'audio2.mp3', info:'info2.txt' }
+  /* Marker 检测 + 音频播放 + 信息更新 */
+  const audioMap={
+    marker1:{src:'audio1.mp3',info:'info1.txt'},
+    marker2:{src:'audio2.mp3',info:'info2.txt'}
   };
-  const cache = {};
-  const playBtn = document.getElementById('playBtn');
-  let ctx = null;
+  const cache={}, playBtn=document.getElementById('playBtn');
+  let ctx=null;
 
   AFRAME.registerComponent('marker-handler',{
     init(){
-      const id = this.el.getAttribute('id');
-      const cfg = audioMap[id]||{};
-      if(cfg.src && !cache[cfg.src]){
-        const a = new Audio(cfg.src);
-        a.preload = 'auto';
-        cache[cfg.src] = a;
+      const id=this.el.getAttribute('id'),
+            cfg=audioMap[id]||{};
+      if(cfg.src&&!cache[cfg.src]){
+        const a=new Audio(cfg.src);
+        a.preload='auto'; cache[cfg.src]=a;
       }
-      let infoText = '';
+      let infoTxt='';
       if(cfg.info){
-        fetch(cfg.info).then(r=>r.ok?r.text():'').then(t=>infoText=t);
+        fetch(cfg.info)
+          .then(r=>r.ok?r.text():'')
+          .then(t=>infoTxt=t)
+          .catch(()=>{});
       }
-      let visible = false;
-      this.tick = AFRAME.utils.throttleTick(()=>{
-        const now = this.el.object3D.visible;
-        if(now !== visible){
-          visible = now;
-          if(visible){
-            if(ctx && ctx.audio && !ctx.audio.paused) ctx.audio.pause();
-            const audio = cache[cfg.src] || new Audio(cfg.src);
-            ctx = { audio };
-            document.getElementById('infoBox').textContent = infoText || '加载中…';
-            updatePlayBtn();
-          }
-        }
-      }, 100);
+      let vis=false;
+      this.tick=AFRAME.utils.throttleTick(()=>{
+        const now=this.el.object3D.visible;
+        if(now!==vis){ vis=now; if(now){
+          if(ctx&&ctx.audio&&!ctx.audio.paused) ctx.audio.pause();
+          ctx={audio:cache[cfg.src]||new Audio(cfg.src)};
+          document.getElementById('infoBox').textContent=infoTxt||'加载中…';
+          updateBtn();
+        }}},100);
     }
   });
 
-  /* 播放按钮逻辑 */
-  playBtn.addEventListener('click', ()=>{
-    if(!ctx||!ctx.audio) return;
-    if(ctx.audio.paused){
-      ctx.audio.play().then(updatePlayBtn).catch(()=>alert('音频播放失败'));
-    } else {
-      ctx.audio.pause();
-      updatePlayBtn();
-    }
+  playBtn.addEventListener('click',()=>{
+    if(!ctx||!ctx.audio)return;
+    if(ctx.audio.paused) ctx.audio.play().then(updateBtn);
+    else { ctx.audio.pause(); updateBtn(); }
   });
-  function updatePlayBtn(){
+  function updateBtn(){
     if(!ctx){
-      playBtn.disabled = true;
-      playBtn.textContent = '播放';
-      playBtn.style.cursor = 'not-allowed';
-      return;
+      playBtn.disabled=true; playBtn.style.cursor='not-allowed'; 
+      playBtn.textContent='播放'; return;
     }
-    playBtn.disabled = false;
-    playBtn.style.cursor = 'pointer';
-    playBtn.textContent = ctx.audio.paused ? '播放' : '暂停';
+    playBtn.disabled=false; playBtn.style.cursor='pointer';
+    playBtn.textContent=ctx.audio.paused?'播放':'暂停';
   }
-</script>
+
+  /* 调试：监听 Debug UI 的 “Start” 按钮 */
+  window.addEventListener('arjs-video-source-onReady',()=>{
+    console.log('📹 video source ready, AR.js 已启动摄像头');
+  });
+  window.addEventListener('arjs-render-started',()=>{
+    console.log('🕶️ AR.js 渲染已开始');
+  });
+  </script>
 </body>
 </html>
