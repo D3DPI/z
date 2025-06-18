@@ -1,416 +1,163 @@
 <!DOCTYPE html>
-<html lang="en">
- <head>
+<html lang="zh-CN">
+<head>
   <meta charset="utf-8"/>
-  <title>
-   岭南乐器增强现实视听工具
-  </title>
-  <script src="aframe.min.js">
-  </script>
-  <script src="aframe-ar.js">
-  </script>
+  <title>岭南乐器增强现实视听工具</title>
+
+  <!-- 微信内核 & 全屏适配 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="x5-page-mode" content="app">
+  <meta name="x5-orientation" content="portrait">
+  <meta name="full-screen" content="yes">
+
+  <!-- A-Frame & AR.js（本地或 CDN 均可）-->
+  <script src="aframe.min.js"></script>
+  <script src="aframe-ar.js"></script>
+
   <style>
-   #a1 {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: grey;
-            color: white;
-            border: none;
-            cursor: not-allowed;
-            z-index: 10;
-        }
-        #b2 {
-            position: absolute;
-            top: 70px;
-            left: 20px;
-            width: calc(100% - 40px);
-            padding: 10px 20px;
-            background-color: #FFF;
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-            z-index: 10;
-        }
+    html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,Roboto;}
+    /* 进入 AR 启动页 */
+    #enter-ar{position:fixed;inset:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;background:#000;color:#fff;
+      z-index:1000;transition:opacity .6s;}
+    #enter-ar button{padding:.8rem 1.6rem;font-size:1rem;border:0;border-radius:8px;
+      background:#1aad19;color:#fff;}
+    /* 播放按钮 & 信息栏 */
+    #playBtn{position:absolute;top:18px;left:18px;z-index:10;cursor:not-allowed;
+      background:#888;border:0;border-radius:6px;padding:.6rem 1.2rem;color:#fff;opacity:.85}
+    #infoBox{position:absolute;top:70px;left:18px;right:18px;z-index:10;
+      background:#fff;border-radius:6px;padding:.8rem;font-size:.9rem;line-height:1.4;}
   </style>
-  <script>
-/**
- * 检测是否在微信浏览器中打开。
- * 如果是，则提示用户切换到默认浏览器以获得更好的体验。
- */
-   function c3() {
-            return /MicroMessenger/i.test(navigator.userAgent);
-        }
-// 检查浏览器环境是否为微信浏览器。
-        var d4 = c3();
-        if (d4) {
-            document.addEventListener('DOMContentLoaded', function () {
-                document.body.innerHTML = 
-                    '<div style="text-align:center;padding:20px;">' +
-                    '<p>为了获得更好的体验，请点击右上角菜单，选择“在默认浏览器中打开”。</p>' +
-                    '</div>';
-            });
-        } else {
-// 初始化变量 e5，用于存储当前播放的音频对象。
-            var e5 = null;
-            var f6 = {};
-            document.addEventListener('DOMContentLoaded', function () {
-// 定义要预加载的音频文件列表。
-                var g7 = ['audio1.mp3', 'audio2.mp3'];
-                g7.forEach(function (h8) {
-                    var i9 = new Audio();
-                    i9.src = h8;
-                    i9.preload = 'auto';
-                    i9.load();
-                    f6[h8] = { j10: i9 };
-                });
-// 获取播放按钮的 DOM 元素。
-                var k11 = document.getElementById('a1');
-                k11.addEventListener('click', function () {
-                    if (e5 && e5.j10) {
-                        var l12 = e5.j10;
-                        if (l12.readyState >= 2) {
-                            if (l12.paused) {
-                                l12.play().then(function () {
-                                    e5.m13 = true;
-                                    k11.textContent = '暂停';
-                                }).catch(function (n14) {
-                                    console.error('Audio playback failed:', n14);
-                                    alert('无法播放音频，请与页面进行交互后重试。');
-                                });
-                            } else {
-                                l12.pause();
-                                e5.m13 = false;
-                                k11.textContent = '播放';
-                            }
-                        } else {
-                            alert('音频尚未加载完毕，请稍后再试。');
-                        }
-                    } else {
-                        alert('没有检测到标记或音频尚未加载。');
-                    }
-                });
-            });
+</head>
 
-/**
- * AFRAME 组件：动态模型旋转。
- * 根据配置参数设置模型初始旋转角度。
- */
-            AFRAME.registerComponent('o15', {
-                schema: {
-                    x: { type: 'number', default: 0 },
-                    y: { type: 'number', default: 0 },
-                    z: { type: 'number', default: 0 }
-                },
-                init: function () {
-                    var p16 = this.el;
-                    var q17 = this.data;
-                    p16.addEventListener('model-loaded', function () {
-                        var r18 = p16.getObject3D('mesh');
-                        if (!r18) return;
-                        r18.rotation.set(
-                            THREE.Math.degToRad(q17.x),
-                            THREE.Math.degToRad(q17.y),
-                            THREE.Math.degToRad(q17.z)
-                        );
-                    });
-                }
-            });
-
-/**
- * AFRAME 组件：AR标记检测逻辑。
- * 用于实时监听标记的可见性状态并触发相应逻辑。
- */
-            AFRAME.registerComponent('s19', {
-                init: function () {
-                    var t20 = this.el;
-                    var u21 = t20.getAttribute('id');
-                    var v22 = null;
-                    var w23 = '';
-                    var x24 = false;
-                    var y25 = document.getElementById('a1');
-                    var z26 = document.getElementById('b2');
-                    var a27 = false;
-                    var b28 = false;
-                    var c29 = '';
-                    var d30 = '';
-                    if (u21 === 'marker1') {
-                        c29 = 'audio1.mp3';
-                        d30 = 'info1.txt';
-                    } else if (u21 === 'marker2') {
-                        c29 = 'audio2.mp3';
-                        d30 = 'info2.txt';
-                    }
-                    var e31 = f6[c29];
-                    if (e31 && e31.j10) {
-                        v22 = e31.j10;
-                    } else {
-                        console.error('Audio player not found for ' + c29);
-                        v22 = new Audio();
-                        v22.src = c29;
-                        v22.preload = 'auto';
-                        v22.load();
-                    }
-                    fetch(d30)
-                        .then(function (f32) {
-                            return f32.ok ? f32.text() : '';
-                        })
-                        .then(function (g33) {
-                            w23 = g33;
-                            b28 = true;
-                        })
-                        .catch(function (h34) {
-                            console.error('Error loading info text:', h34);
-                            b28 = false;
-                        });
-                    this.tick = AFRAME.utils.throttleTick(function () {
-                        var i35 = t20.object3D.visible;
-                        if (i35 !== a27) {
-                            a27 = i35;
-                            b28 = v22.readyState >= 2;
-                            if (a27) {
-                                if (e5 && e5.u21 !== u21) {
-                                    if (e5.j10 && !e5.j10.paused) {
-                                        e5.j10.pause();
-                                        e5.m13 = false;
-                                    }
-                                }
-                                e5 = {
-                                    u21: u21,
-                                    j10: v22,
-                                    w23: w23,
-                                    m13: x24,
-                                    b28: b28,
-                                    b28: b28
-                                };
-                                z26.textContent = w23 || 'No information available';
-                                f36();
-                            }
-                        }
-                    }, 100);
-                    function f36() {
-                        y25.disabled = false;
-                        y25.style.backgroundColor = '#007BFF';
-                        y25.style.cursor = 'pointer';
-                        y25.textContent = x24 ? '暂停' : '播放';
-                    }
-                }
-            });
-        }
-  </script>
- </head>
- <body style="margin: 0; overflow: hidden;">
-  <button disabled="" id="a1">
-   播放
-  </button>
-  <div id="b2">
-   请用摄像头对准“岭南乐器码”
+<body>
+  <!-- 启动页 -->
+  <div id="enter-ar">
+    <p style="margin-bottom:1.2rem;font-size:1.1rem;">点击授权摄像头并进入 AR 体验</p>
+    <button id="enterBtn">进入 AR</button>
   </div>
-  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
-   <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
-    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
-    </a-entity>
-   </a-marker>
-   <a-marker id="marker2" preset="custom" s19="" url="pattern2.patt">
-    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.013 0.013 0.013">
-    </a-entity>
-   </a-marker>
-   <a-entity camera="">
-   </a-entity>
+
+  <!-- 控件 -->
+  <button id="playBtn" disabled>播放</button>
+  <div id="infoBox">请用摄像头对准“岭南乐器码”</div>
+
+  <!-- A-Frame 场景 -->
+  <a-scene embedded vr-mode-ui="enabled: false"
+           arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false">
+    <!-- Marker 1 -->
+    <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-handler>
+      <a-entity id="model1" gltf-model="model1.gltf"
+                position="0 0 0" scale="0.02 0.02 0.02"
+                set-rotation="x:0; y:0; z:0"></a-entity>
+    </a-marker>
+
+    <!-- Marker 2 -->
+    <a-marker id="marker2" preset="custom" url="pattern2.patt" marker-handler>
+      <a-entity id="model2" gltf-model="model2.gltf"
+                position="0 0 0" scale="0.013 0.013 0.013"
+                set-rotation="x:0; y:0; z:0"></a-entity>
+    </a-marker>
+
+    <a-entity camera></a-entity>
   </a-scene>
+
   <script>
-   // Background audio playback enhancements
-    document.addEventListener('DOMContentLoaded', function () {
-        var audioElements = document.querySelectorAll('audio');
-        var playbackRate = 1.0;
+/* ---------------- 1. 进入 AR 的权限申请 ---------------- */
+document.getElementById('enterBtn').addEventListener('click', async () => {
+  try {
+    // iOS 需手动申请 Motion 权限
+    if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+      await DeviceMotionEvent.requestPermission().catch(()=>{});
+    }
+    // Camera 权限
+    await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+  } catch(e){
+    alert('无法获取摄像头权限，AR 体验已终止'); return;
+  }
+  // 启动 AR.js
+  const scene = document.querySelector('a-scene');
+  if (scene.hasLoaded) { scene.systems.arjs.start(); }
+  else { scene.addEventListener('loaded', ()=>scene.systems.arjs.start(), {once:true}); }
+  // 隐藏启动页
+  const cover = document.getElementById('enter-ar');
+  cover.style.opacity = 0; setTimeout(()=>cover.remove(), 600);
+});
 
-        audioElements.forEach(function (audio) {
-// 增加播放速率控制逻辑。
-// 当音频播放速率发生变化时记录日志。
-            audio.addEventListener('ratechange', function () {
-                console.log(`Playback rate adjusted to: ${audio.playbackRate}`);
-            });
-
-            audio.addEventListener('play', function () {
-                console.log('Audio started playing');
-            });
-
-            audio.addEventListener('pause', function () {
-                console.log('Audio paused');
-            });
-
-// 根据音频文件的时长自动调整播放速率。
-            if (audio.duration > 60) {
-                playbackRate = 1.5;
-                audio.playbackRate = playbackRate;
-                console.log(`Long audio detected. Adjusted playback rate to: ${playbackRate}`);
-            }
-        });
+/* ---------------- 2. 组件：模型初始旋转 ---------------- */
+AFRAME.registerComponent('set-rotation', {
+  schema:{x:{type:'number',default:0},y:{type:'number',default:0},z:{type:'number',default:0}},
+  init(){
+    this.el.addEventListener('model-loaded',()=>{
+      const m = this.el.getObject3D('mesh'); if(!m) return;
+      m.rotation.set(
+        THREE.Math.degToRad(this.data.x),
+        THREE.Math.degToRad(this.data.y),
+        THREE.Math.degToRad(this.data.z)
+      );
     });
+  }
+});
 
-// 增强的错误处理逻辑（仅记录后台日志）。
-    window.onerror = function (message, source, lineno, colno, error) {
-        console.error("Error captured:", {
-            message: message,
-            source: source,
-            lineno: lineno,
-            colno: colno,
-            error: error
-        });
-    };
+/* ---------------- 3. 音频/信息逻辑与 Marker 处理 ---------------- */
+const audioMap = {
+  marker1:{src:'audio1.mp3', info:'info1.txt'},
+  marker2:{src:'audio2.mp3', info:'info2.txt'}
+};
+const cachedAudio = {};   // src -> <audio>
+let currentCtx = null;    // {id,audio,playing}
 
-// 模型材质调整逻辑（对用户不可见）。
-    AFRAME.registerComponent('dynamic-model', {
-        init: function () {
-            var el = this.el;
-            var colorIndex = 0;
-            var colors = ['#FF5733', '#33FF57', '#3357FF'];
-            setInterval(function () {
-                colorIndex = (colorIndex + 1) % colors.length;
-                el.setAttribute('material', 'color', colors[colorIndex]);
-                console.log(`Model color changed to: ${colors[colorIndex]}`);
-            }, 10000); // Change color every 10 seconds
+AFRAME.registerComponent('marker-handler',{
+  init(){
+    const markerId = this.el.getAttribute('id');
+    const cfg = audioMap[markerId]||{};
+    /* 预加载音频 */
+    if(cfg.src && !cachedAudio[cfg.src]){
+      const a=new Audio(cfg.src); a.preload='auto'; cachedAudio[cfg.src]=a;
+    }
+    /* 预取文字 */
+    let infoTxt = '';
+    if(cfg.info){
+      fetch(cfg.info).then(r=>r.ok?r.text():'').then(t=>infoTxt=t).catch(()=>{});
+    }
+    /* 监听可见性 */
+    let wasVisible = false;
+    this.tick = AFRAME.utils.throttleTick(()=>{
+      const visible = this.el.object3D.visible;
+      if(visible!==wasVisible){
+        wasVisible = visible;
+        if(visible){
+          // 若有其他音频在播，暂停它
+          if(currentCtx && currentCtx.audio && !currentCtx.audio.paused){
+            currentCtx.audio.pause();
+          }
+          currentCtx = {
+            id: markerId,
+            audio: cachedAudio[cfg.src] || new Audio(cfg.src),
+          };
+          document.getElementById('infoBox').textContent = infoTxt || '加载中…';
+          updatePlayBtn();
         }
-    });
+      }
+    },100);
+  }
+});
 
-// 动态光照强度调整（后台功能）。
-    AFRAME.registerComponent('dynamic-light', {
-        schema: {
-            intensity: { type: 'number', default: 1 }
-        },
-        init: function () {
-            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
-            light.intensity = this.data.intensity;
-        },
-        update: function () {
-            var light = this.el.getObject3D('light');
-            light.intensity = this.data.intensity;
-        }
-    });
-
-// 实时监控AR标记的可见性。
-    AFRAME.registerComponent('visibility-tracker', {
-        init: function () {
-            var el = this.el;
-            var isVisible = false;
-
-// 当标记被检测到时记录日志。
-            this.el.addEventListener('markerFound', function () {
-                isVisible = true;
-                console.log(`Marker found: ${el.id}`);
-            });
-
-// 当标记丢失时记录日志。
-            this.el.addEventListener('markerLost', function () {
-                isVisible = false;
-                console.log(`Marker lost: ${el.id}`);
-            });
-        }
-    });
+/* 播放按钮 */
+const btn = document.getElementById('playBtn');
+btn.addEventListener('click',()=>{
+  if(!currentCtx || !currentCtx.audio) return;
+  const au = currentCtx.audio;
+  if(au.paused){
+    au.play().then(updatePlayBtn).catch(()=>alert('音频播放失败，请重试'));
+  }else{
+    au.pause(); updatePlayBtn();
+  }
+});
+function updatePlayBtn(){
+  if(!currentCtx){btn.disabled=true;btn.style.cursor='not-allowed';btn.textContent='播放';return;}
+  btn.disabled=false; btn.style.cursor='pointer';
+  btn.textContent = currentCtx.audio.paused ? '播放' : '暂停';
+}
   </script>
-  <script>
-   /**
-     * 以下脚本包含了增强现实应用中的核心逻辑设计。
-     * 代码注重于提高音频交互与3D模型渲染的灵活性与可靠性。
-     * 
-     * 创新点包括：
-     * 1. 实现了动态光照控制，提升了视觉交互的真实感。
-     * 2. 通过AFRAME的组件扩展，实现了模型动态材质调整。
-     * 3. 使用音频播放速率调节技术，针对长音频提供了自动优化功能。
-     * 4. 添加了后台运行的标记跟踪逻辑，实现了AR环境中的实时反馈。
-     */
-
-    // 音频交互增强逻辑
-    document.addEventListener('DOMContentLoaded', function () {
-        var audioElements = document.querySelectorAll('audio');
-        var playbackRate = 1.0;
-
-        audioElements.forEach(function (audio) {
-            // 监听音频播放速率的变化，用于动态调整
-// 当音频播放速率发生变化时记录日志。
-            audio.addEventListener('ratechange', function () {
-                console.log(`播放速率调整为: ${audio.playbackRate}`);
-            });
-
-            // 播放和暂停事件的后台记录
-            audio.addEventListener('play', function () {
-                console.log('音频开始播放');
-            });
-            audio.addEventListener('pause', function () {
-                console.log('音频已暂停');
-            });
-
-            // 针对长音频文件自动调整播放速率
-            if (audio.duration > 60) {
-                playbackRate = 1.5;  // 对于超过60秒的音频，设置为1.5倍速
-                audio.playbackRate = playbackRate;
-                console.log(`长音频检测到，播放速率已调整为: ${playbackRate}`);
-            }
-        });
-    });
-
-    // AFRAME 组件扩展：动态材质调整
-    AFRAME.registerComponent('dynamic-model', {
-        init: function () {
-            /**
-             * 此组件用于实现3D模型的材质动态调整功能。
-             * 通过定时器，每隔10秒自动切换模型颜色，增强视觉体验。
-             */
-            var el = this.el;
-            var colorIndex = 0;
-            var colors = ['#FF5733', '#33FF57', '#3357FF']; // 定义颜色列表
-            setInterval(function () {
-                colorIndex = (colorIndex + 1) % colors.length;
-                el.setAttribute('material', 'color', colors[colorIndex]);
-                console.log(`模型颜色已切换至: ${colors[colorIndex]}`);
-            }, 10000); // 每10秒切换一次颜色
-        }
-    });
-
-    // AFRAME 组件扩展：动态光照
-    AFRAME.registerComponent('dynamic-light', {
-        schema: {
-            intensity: { type: 'number', default: 1 } // 定义光照强度，默认值为1
-        },
-        init: function () {
-            /**
-             * 动态光照组件，用于根据光照强度参数实时调整场景中的光源亮度。
-             */
-            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
-            light.intensity = this.data.intensity;
-        },
-        update: function () {
-            var light = this.el.getObject3D('light');
-            light.intensity = this.data.intensity;
-        }
-    });
-
-    // AR标记实时跟踪
-    AFRAME.registerComponent('visibility-tracker', {
-        init: function () {
-            /**
-             * 该组件用于追踪AR标记的可见性状态。
-             * 创新之处在于结合事件监听和后台数据记录，实现了动态反馈功能。
-             */
-            var el = this.el;
-            var isVisible = false;
-
-            // 监听标记被发现的事件
-// 当标记被检测到时记录日志。
-            this.el.addEventListener('markerFound', function () {
-                isVisible = true;
-                console.log(`标记被发现: ${el.id}`);
-            });
-
-            // 监听标记丢失的事件
-// 当标记丢失时记录日志。
-            this.el.addEventListener('markerLost', function () {
-                isVisible = false;
-                console.log(`标记丢失: ${el.id}`);
-            });
-        }
-    });
-  </script>
- </body>
+</body>
 </html>
