@@ -24,7 +24,8 @@
     }
     #startBtn {
       padding:.9rem 1.8rem; font-size:1rem; border:0; border-radius:9px;
-      background:#1aad19; color:#fff; -webkit-tap-highlight-color:transparent;
+      background:#1aad19; color:#fff;
+      -webkit-tap-highlight-color:transparent;
     }
     /* 播放按钮 & 信息栏 */
     #playBtn {
@@ -43,14 +44,19 @@
   <!-- 1. 启动覆层 -->
   <div id="cover">
     <p style="margin-bottom:1.4rem;font-size:1.12rem;">点击授权摄像头并进入 AR 体验</p>
-    <button id="startBtn">进入 AR</button>
+    <!-- 内联事件：onclick + ontouchend -->
+    <button id="startBtn"
+            onclick="startAR()"
+            ontouchend="startAR()">
+      进入 AR
+    </button>
   </div>
 
   <!-- 2. 播放按钮 & 信息栏 -->
   <button id="playBtn" disabled>播放</button>
   <div id="infoBox">请用摄像头对准“岭南乐器码”</div>
 
-  <!-- 3. A-Frame 场景：使用 webcam 源 -->
+  <!-- 3. A-Frame 场景（webcam 模式） -->
   <a-scene id="scene" embedded vr-mode-ui="enabled:false"
            arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false">
     <a-marker id="marker1" preset="custom" url="pattern1.patt" marker-handler>
@@ -65,110 +71,114 @@
   </a-scene>
 
 <script>
-/* 1. 等待用户手势再启动 AR.js（内部会 getUserMedia） */
-const cover = document.getElementById('cover');
-const startBtn = document.getElementById('startBtn');
+  let arStarted = false;
 
-['pointerdown','touchstart','click'].forEach(ev =>
-  startBtn.addEventListener(ev, startAR, { once: true, passive: true })
-);
+  function startAR() {
+    if (arStarted) return;
+    arStarted = true;
 
-function startAR(){
-  // iOS 需要先申请 DeviceMotion 权限（可忽略拒绝）
-  if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-    DeviceMotionEvent.requestPermission().catch(()=>{});
+    // iOS 需先申请陀螺仪权限
+    if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission().catch(()=>{});
+    }
+
+    // 启动 AR.js（在用户手势内触发 getUserMedia）
+    const scene = document.getElementById('scene');
+    const launch = () => scene.systems.arjs.start();
+    if (scene.hasLoaded) {
+      launch();
+    } else {
+      scene.addEventListener('loaded', launch, { once: true });
+    }
+
+    // 淡出覆盖层
+    const cover = document.getElementById('cover');
+    cover.style.opacity = 0;
+    setTimeout(() => cover.remove(), 600);
   }
 
-  // 调用 AR.js 启动摄像头流
-  const scene = document.getElementById('scene');
-  const launch = () => scene.systems.arjs.start();
-  if (scene.hasLoaded) launch();
-  else scene.addEventListener('loaded', launch, { once: true });
-
-  // 隐藏启动覆层
-  cover.style.opacity = 0;
-  setTimeout(()=>cover.remove(), 600);
-}
-
-/* 2. 模型初始旋转组件 */
-AFRAME.registerComponent('set-rotation',{
-  schema:{ x:{type:'number',default:0}, y:{type:'number',default:0}, z:{type:'number',default:0} },
-  init(){
-    this.el.addEventListener('model-loaded', ()=>{
-      const mesh = this.el.getObject3D('mesh');
-      if (!mesh) return;
-      mesh.rotation.set(
-        THREE.Math.degToRad(this.data.x),
-        THREE.Math.degToRad(this.data.y),
-        THREE.Math.degToRad(this.data.z)
-      );
-    });
-  }
-});
-
-/* 3. Marker 检测 + 音频播放 + 信息更新 */
-const audioMap = {
-  marker1: { src: 'audio1.mp3', info: 'info1.txt' },
-  marker2: { src: 'audio2.mp3', info: 'info2.txt' }
-};
-const cache = {};
-const playBtn = document.getElementById('playBtn');
-let ctx = null;
-
-AFRAME.registerComponent('marker-handler',{
-  init(){
-    const id = this.el.getAttribute('id');
-    const cfg = audioMap[id] || {};
-    if (cfg.src && !cache[cfg.src]) {
-      const a = new Audio(cfg.src);
-      a.preload = 'auto';
-      cache[cfg.src] = a;
+  /* 模型初始旋转组件 */
+  AFRAME.registerComponent('set-rotation', {
+    schema: { x:{type:'number',default:0}, y:{type:'number',default:0}, z:{type:'number',default:0} },
+    init(){
+      this.el.addEventListener('model-loaded', () => {
+        const mesh = this.el.getObject3D('mesh');
+        if (!mesh) return;
+        mesh.rotation.set(
+          THREE.Math.degToRad(this.data.x),
+          THREE.Math.degToRad(this.data.y),
+          THREE.Math.degToRad(this.data.z)
+        );
+      });
     }
-    let infoText = '';
-    if (cfg.info) {
-      fetch(cfg.info)
-        .then(r => r.ok ? r.text() : '')
-        .then(t => infoText = t)
-        .catch(()=>{});
-    }
-    let vis = false;
-    this.tick = AFRAME.utils.throttleTick(()=>{
-      const now = this.el.object3D.visible;
-      if (now !== vis) {
-        vis = now;
-        if (now) {
-          if (ctx && ctx.audio && !ctx.audio.paused) ctx.audio.pause();
-          const audio = cache[cfg.src] || new Audio(cfg.src);
-          ctx = { audio };
-          document.getElementById('infoBox').textContent = infoText || '加载中…';
-          updatePlayBtn();
-        }
+  });
+
+  /* Marker 识别 + 音频播放 + 信息更新 */
+  const audioMap = {
+    marker1: { src:'audio1.mp3', info:'info1.txt' },
+    marker2: { src:'audio2.mp3', info:'info2.txt' }
+  };
+  const cache = {};
+  const playBtn = document.getElementById('playBtn');
+  let ctx = null;
+
+  AFRAME.registerComponent('marker-handler', {
+    init(){
+      const id = this.el.getAttribute('id');
+      const cfg = audioMap[id] || {};
+      if (cfg.src && !cache[cfg.src]) {
+        const a = new Audio(cfg.src);
+        a.preload = 'auto';
+        cache[cfg.src] = a;
       }
-    }, 100);
-  }
-});
+      let infoText = '';
+      if (cfg.info) {
+        fetch(cfg.info)
+          .then(r => r.ok ? r.text() : '')
+          .then(t => infoText = t)
+          .catch(()=>{});
+      }
+      let visible = false;
+      this.tick = AFRAME.utils.throttleTick(() => {
+        const now = this.el.object3D.visible;
+        if (now !== visible) {
+          visible = now;
+          if (now) {
+            // 暂停上一个
+            if (ctx && ctx.audio && !ctx.audio.paused) ctx.audio.pause();
+            // 准备新音频
+            const audio = cache[cfg.src] || new Audio(cfg.src);
+            ctx = { audio };
+            document.getElementById('infoBox').textContent = infoText || '加载中…';
+            updatePlayBtn();
+          }
+        }
+      }, 100);
+    }
+  });
 
-playBtn.addEventListener('click', ()=>{
-  if (!ctx || !ctx.audio) return;
-  if (ctx.audio.paused) {
-    ctx.audio.play().then(updatePlayBtn).catch(()=>alert('音频播放失败'));
-  } else {
-    ctx.audio.pause();
-    updatePlayBtn();
-  }
-});
+  /* 播放按钮逻辑 */
+  playBtn.addEventListener('click', () => {
+    if (!ctx || !ctx.audio) return;
+    if (ctx.audio.paused) {
+      ctx.audio.play().then(updatePlayBtn).catch(()=>alert('音频播放失败'));
+    } else {
+      ctx.audio.pause();
+      updatePlayBtn();
+    }
+  });
 
-function updatePlayBtn(){
-  if (!ctx) {
-    playBtn.disabled = true;
-    playBtn.style.cursor = 'not-allowed';
-    playBtn.textContent = '播放';
-    return;
+  function updatePlayBtn() {
+    if (!ctx) {
+      playBtn.disabled = true;
+      playBtn.style.cursor = 'not-allowed';
+      playBtn.textContent = '播放';
+      return;
+    }
+    playBtn.disabled = false;
+    playBtn.style.cursor = 'pointer';
+    playBtn.textContent = ctx.audio.paused ? '播放' : '暂停';
   }
-  playBtn.disabled = false;
-  playBtn.style.cursor = 'pointer';
-  playBtn.textContent = ctx.audio.paused ? '播放' : '暂停';
-}
 </script>
 </body>
 </html>
